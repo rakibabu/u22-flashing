@@ -12,6 +12,7 @@ test('login screen can be rendered', function () {
         ->assertSee('/fonts/bebas-neue-400.woff2')
         ->assertSee('/images/flashing/logo-white.svg')
         ->assertSee('/vendor/livewire/livewire')
+        ->assertSee('/flux/flux')
         ->assertSee('Forgot your password?')
         ->assertSee('auth-forgot-link')
         ->assertDontSee('Enter your email or username and password below')
