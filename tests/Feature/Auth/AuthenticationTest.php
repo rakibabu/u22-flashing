@@ -19,6 +19,8 @@ test('login screen can be rendered', function () {
         ->assertDontSee('Spelers activeren hun account via de invite-link van de coach.');
 
     expect(preg_match('#/livewire-[a-f0-9]+/livewire(?:\\.min)?\\.js#', $response->getContent()))->toBe(0);
+    expect(preg_match('#/flux/flux(?:\\.min)?\\.js\\?id=\\d+#', $response->getContent()))->toBe(1);
+    expect($response->getContent())->not->toContain('/flux/flux.min.js?id=497da1a7');
 });
 
 test('home redirects guests to the login screen', function () {
