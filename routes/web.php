@@ -22,7 +22,9 @@ use App\Models\Player;
 use App\Services\PlayerAdviceService;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::get('/', fn () => auth()->check()
+    ? redirect()->route('dashboard')
+    : redirect()->route('login'))->name('home');
 
 Route::get('/invite/{token}', [InviteActivationController::class, 'show'])->name('invite.show');
 Route::post('/invite/{token}', [InviteActivationController::class, 'store'])->name('invite.store');

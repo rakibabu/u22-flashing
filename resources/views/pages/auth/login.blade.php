@@ -1,6 +1,6 @@
 <x-layouts::auth :title="__('Log in')">
     <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Log in to your account')" :description="__('Enter your email or username and password below')" />
+        <x-auth-header :title="__('Log in to your account')" />
 
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
@@ -13,13 +13,13 @@
             <!-- Email or username -->
             <flux:input
                 name="email"
-                :label="__('Email address or username')"
+                :label="__('Email address')"
                 :value="old('email')"
                 type="text"
                 required
                 autofocus
                 autocomplete="username"
-                placeholder="coach@example.test or username"
+                placeholder="email@example.com"
             />
 
             <!-- Password -->
@@ -35,7 +35,7 @@
                 />
 
                 @if (Route::has('password.request'))
-                    <flux:link class="absolute top-0 text-sm end-0" :href="route('password.request')" wire:navigate>
+                    <flux:link class="auth-forgot-link absolute top-0 text-sm end-0 no-underline hover:no-underline focus:no-underline" :href="route('password.request')" wire:navigate>
                         {{ __('Forgot your password?') }}
                     </flux:link>
                 @endif
@@ -50,7 +50,5 @@
                 </flux:button>
             </div>
         </form>
-
-        <p class="text-sm text-center text-zinc-600 dark:text-zinc-400">Spelers activeren hun account via de invite-link van de coach.</p>
     </div>
 </x-layouts::auth>

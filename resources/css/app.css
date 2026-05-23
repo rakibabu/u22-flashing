@@ -242,6 +242,12 @@
         @apply h-auto rounded-xl bg-flash-orange px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-flash-orange/20 hover:bg-flash-orange hover:shadow-md hover:shadow-flash-orange/30;
     }
 
+    .auth-forgot-link,
+    .auth-forgot-link:hover,
+    .auth-forgot-link:focus {
+        text-decoration-line: none !important;
+    }
+
     .u22-checkin-form {
         @apply overflow-visible pb-0;
     }
@@ -262,8 +268,11 @@
 
     @media (width >= 40rem) {
         .u22-checkin-actions {
+            width: auto;
             margin-left: 0;
             margin-right: 0;
+            padding-left: 0;
+            padding-right: 0;
             padding-bottom: 0;
         }
     }

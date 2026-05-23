@@ -8,6 +8,18 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+{{-- Web App Manifest voor Android "Toevoegen aan homescreen":
+     zonder deze zou Android de apple-touch-icon gebruiken (fallback) of
+     erger, het Laravel default icoon. Met manifest krijgt de snelkoppeling
+     de juiste naam ("Flashing"), een eigen splash-screen en het correcte
+     icoon in 192x192 + 512x512 + maskable varianten.
+
+     We gebruiken /manifest.json (ipv .webmanifest) zodat nginx 'm met
+     Content-Type: application/json serveert - dat is per MDN valide voor
+     PWA manifests, en voorkomt het octet-stream+nosniff probleem dat
+     .webmanifest gaf. --}}
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0F0B3E">
 
 <link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/bebas-neue-400.woff2" as="font" type="font/woff2" crossorigin>

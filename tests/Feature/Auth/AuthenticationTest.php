@@ -10,7 +10,16 @@ test('login screen can be rendered', function () {
         ->assertOk()
         ->assertSee('/fonts/inter-var-latin.woff2')
         ->assertSee('/fonts/bebas-neue-400.woff2')
-        ->assertSee('/images/flashing/logo-white.svg');
+        ->assertSee('/images/flashing/logo-white.svg')
+        ->assertSee('Forgot your password?')
+        ->assertSee('auth-forgot-link')
+        ->assertDontSee('Enter your email or username and password below')
+        ->assertDontSee('Spelers activeren hun account via de invite-link van de coach.');
+});
+
+test('home redirects guests to the login screen', function () {
+    $this->get(route('home'))
+        ->assertRedirect(route('login', absolute: false));
 });
 
 test('users can authenticate using the login screen', function () {
