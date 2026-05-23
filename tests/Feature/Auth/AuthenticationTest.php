@@ -11,10 +11,13 @@ test('login screen can be rendered', function () {
         ->assertSee('/fonts/inter-var-latin.woff2')
         ->assertSee('/fonts/bebas-neue-400.woff2')
         ->assertSee('/images/flashing/logo-white.svg')
+        ->assertSee('/vendor/livewire/livewire')
         ->assertSee('Forgot your password?')
         ->assertSee('auth-forgot-link')
         ->assertDontSee('Enter your email or username and password below')
         ->assertDontSee('Spelers activeren hun account via de invite-link van de coach.');
+
+    expect(preg_match('#/livewire-[a-f0-9]+/livewire(?:\\.min)?\\.js#', $response->getContent()))->toBe(0);
 });
 
 test('home redirects guests to the login screen', function () {
