@@ -6,6 +6,63 @@
     </x-page-header>
 
     <section class="rounded-xl border border-primary-100 bg-white p-4 shadow-sm shadow-gray-100/50">
+        <div>
+            <p class="text-xs font-semibold uppercase text-primary-700">Trainingsprogramma PDF's</p>
+            <h2 class="mt-1 font-display text-3xl leading-none text-primary-900">Per trainingstype</h2>
+            <p class="mt-1 max-w-2xl text-sm text-zinc-600">
+                Upload hier de PDF voor conditie, bulk/kracht of onderhoud. Spelers zien automatisch de PDF van hun eigen trainingstype.
+            </p>
+        </div>
+
+        <div class="mt-4 grid gap-3 md:grid-cols-3">
+            @foreach ($programTemplates as $template)
+                <form
+                    method="POST"
+                    action="{{ route('coach.program-templates.pdf.store', $template) }}"
+                    enctype="multipart/form-data"
+                    class="rounded-lg border border-primary-100 bg-primary-50/50 p-3"
+                    wire:key="program-template-pdf-{{ $template->id }}"
+                >
+                    @csrf
+
+                    <div class="flex min-h-16 flex-col justify-between gap-1">
+                        <h3 class="font-semibold text-primary-900">{{ $template->name }}</h3>
+                        <p class="text-xs text-zinc-600">{{ $template->training_program_pdf_path ? 'PDF ingesteld' : 'Nog geen PDF' }}</p>
+                    </div>
+
+                    <div class="mt-3 space-y-3">
+                        <label class="block text-sm font-medium text-primary-900" for="training-program-pdf-{{ $template->id }}">
+                            PDF uploaden
+                        </label>
+                        <input
+                            id="training-program-pdf-{{ $template->id }}"
+                            name="training_program_pdf"
+                            type="file"
+                            accept="application/pdf"
+                            class="block w-full rounded-md border border-primary-100 bg-white px-3 py-2 text-sm text-primary-900 file:mr-3 file:rounded-md file:border-0 file:bg-primary-100 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-primary-900"
+                        >
+
+                        @error('training_program_pdf')
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+
+                        @if (session('saved_program_template_id') === $template->id)
+                            <p class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">PDF opgeslagen.</p>
+                        @endif
+
+                        <div class="flex flex-wrap gap-2">
+                            <flux:button type="submit" size="sm" variant="primary">Opslaan</flux:button>
+                            @if ($template->training_program_pdf_path)
+                                <flux:button size="sm" :href="route('coach.program-templates.pdf', $template)" target="_blank">Bekijk PDF</flux:button>
+                            @endif
+                        </div>
+                    </div>
+                </form>
+            @endforeach
+        </div>
+    </section>
+
+    <section class="rounded-xl border border-primary-100 bg-white p-4 shadow-sm shadow-gray-100/50">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase text-primary-700">Teamactivatie-link</p>

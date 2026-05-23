@@ -4,6 +4,7 @@ namespace App\Livewire\Coach\Players;
 
 use App\Models\Invite;
 use App\Models\Player;
+use App\Models\ProgramTemplate;
 use App\Models\TeamInvite;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
@@ -54,6 +55,7 @@ class Index extends Component
     public function render()
     {
         return view('livewire.coach.players.index', [
+            'programTemplates' => ProgramTemplate::query()->orderBy('sort_order')->get(),
             'players' => Player::query()
                 ->with('latestInvite')
                 ->when($this->search, fn ($query) => $query->where('name', 'like', '%'.$this->search.'%'))

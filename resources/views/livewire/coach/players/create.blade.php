@@ -18,7 +18,6 @@
             <flux:input wire:model="long_term_target_weight_kg" type="number" step="0.1" label="Lange termijn" />
         </div>
         <flux:textarea wire:model="notes" label="Notities" />
-        <flux:input wire:model="training_program_pdf" type="file" label="Persoonlijk trainingsprogramma PDF" accept="application/pdf" />
         <flux:button type="submit" variant="primary">Opslaan</flux:button>
     </form>
 </div>

@@ -3,7 +3,6 @@
 use App\Livewire\Coach\Dashboard;
 use App\Livewire\Coach\Players\CheckinPreview;
 use App\Livewire\Coach\Players\Create;
-use App\Livewire\Coach\Players\Edit;
 use App\Livewire\Coach\Players\Show;
 use App\Livewire\Player\Checkin;
 use App\Models\CoachNote;
@@ -83,22 +82,28 @@ test('coach maakt muscle gain speler aan met persoonlijke bulk defaults', functi
         ->and($player->settings->notes)->toContain('3x kracht');
 });
 
-test('coach kan persoonlijke trainingsprogramma pdf uploaden', function () {
+test('coach kan trainingsprogramma pdf per type uploaden', function () {
     Storage::fake('local');
+    $coach = coachUser();
 
-    $player = playerWithUser(['name' => 'Pdf Speler']);
+    $template = ProgramTemplate::query()->create([
+        'type' => Player::Conditioning,
+        'name' => 'Trainingstype A: Conditie',
+        'description' => 'Conditieprogramma',
+        'goal' => 'Fit worden',
+        'sort_order' => 1,
+    ]);
     $pdf = UploadedFile::fake()->create('programma.pdf', 20, 'application/pdf');
 
-    Livewire::actingAs(coachUser())
-        ->test(Edit::class, ['player' => $player])
-        ->set('training_program_pdf', $pdf)
-        ->call('save')
-        ->assertRedirect(route('coach.players.show', $player, absolute: false));
+    $this->actingAs($coach)->post(route('coach.program-templates.pdf.store', $template), [
+        'training_program_pdf' => $pdf,
+    ])->assertRedirect()
+        ->assertSessionHas('saved_program_template_id', $template->id);
 
-    $player->refresh();
+    $template->refresh();
 
-    expect($player->training_program_pdf_path)->not->toBeNull();
-    Storage::disk('local')->assertExists($player->training_program_pdf_path);
+    expect($template->training_program_pdf_path)->not->toBeNull();
+    Storage::disk('local')->assertExists($template->training_program_pdf_path);
 });
 
 test('invite-link werkt een keer en speler kan wachtwoord instellen', function () {
@@ -215,12 +220,17 @@ test('coach ziet weekchecks van alle spelers en weken', function () {
 test('speler ziet persoonlijke programma pdf en geen lege oefenbibliotheek', function () {
     Storage::fake('local');
 
-    $player = playerWithUser([
-        'name' => 'Programma Pdf Speler',
-        'training_program_pdf_path' => 'player-programs/1/programma.pdf',
+    $player = playerWithUser(['name' => 'Programma Pdf Speler', 'program_type' => Player::Conditioning]);
+    $template = ProgramTemplate::query()->create([
+        'type' => Player::Conditioning,
+        'name' => 'Trainingstype A: Conditie',
+        'description' => 'Conditieprogramma',
+        'goal' => 'Fit worden',
+        'sort_order' => 1,
+        'training_program_pdf_path' => 'program-templates/conditioning/programma.pdf',
     ]);
 
-    Storage::disk('local')->put($player->training_program_pdf_path, '%PDF-1.4 test');
+    Storage::disk('local')->put($template->training_program_pdf_path, '%PDF-1.4 test');
 
     $this->actingAs($player->user)->get(route('player.program'))
         ->assertOk()
@@ -432,6 +442,42 @@ test('speler kan weekcheck invullen en aanpassen', function () {
 
     expect($player->checkins()->count())->toBe(1)
         ->and($player->checkins()->first()->strength_sessions)->toBe(2);
+});
+
+test('speler kan alleen de huidige weekcheck aanpassen', function () {
+    $player = playerWithUser();
+    $previousWeek = now()->startOfWeek()->subWeek();
+
+    $oldCheckin = WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => $previousWeek->toDateString(),
+        'strength_sessions' => 1,
+        'conditioning_sessions' => 1,
+        'mobility_sessions' => 1,
+        'sleep_avg_hours' => 7,
+        'energy_score' => 6,
+        'soreness_score' => 4,
+        'submitted_at' => $previousWeek->copy()->addDays(6),
+    ]);
+
+    expect($player->user->can('update', $oldCheckin))->toBeFalse();
+
+    Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->set('form.strength_sessions', 2)
+        ->set('form.conditioning_sessions', 2)
+        ->set('form.mobility_sessions', 3)
+        ->set('form.had_full_rest_day', true)
+        ->set('form.sleep_avg_hours', 7.5)
+        ->set('form.energy_score', 8)
+        ->set('form.soreness_score', 3)
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertSet('saved', true);
+
+    expect($oldCheckin->refresh()->strength_sessions)->toBe(1)
+        ->and($player->checkins()->count())->toBe(2)
+        ->and($player->checkins()->latest('week_start_date')->first()->week_start_date->isSameDay(now()->startOfWeek()))->toBeTrue();
 });
 
 test('speler krijgt duidelijke stapmelding bij ontbrekende checkin velden', function () {

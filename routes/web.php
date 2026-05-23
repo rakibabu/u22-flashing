@@ -42,7 +42,8 @@ Route::middleware(['auth', 'role:coach'])->prefix('coach')->name('coach.')->grou
     Route::get('players', CoachPlayersIndex::class)->name('players.index');
     Route::get('players/create', CoachPlayersCreate::class)->name('players.create');
     Route::get('players/{player}', CoachPlayersShow::class)->name('players.show');
-    Route::get('players/{player}/program-pdf', [PlayerProgramPdfController::class, 'coach'])->name('players.program-pdf');
+    Route::get('program-templates/{programTemplate}/pdf', [PlayerProgramPdfController::class, 'coach'])->name('program-templates.pdf');
+    Route::post('program-templates/{programTemplate}/pdf', [PlayerProgramPdfController::class, 'store'])->name('program-templates.pdf.store');
     Route::get('players/{player}/edit', CoachPlayersEdit::class)->name('players.edit');
     Route::get('players/{player}/checkin-preview', CoachPlayersCheckinPreview::class)->name('players.checkin-preview');
     Route::get('checkins', CoachCheckinsIndex::class)->name('checkins.index');

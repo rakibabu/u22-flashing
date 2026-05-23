@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('players', function (Blueprint $table) {
-            $table->string('training_program_pdf_path')->nullable()->after('notes');
+        Schema::table('program_templates', function (Blueprint $table) {
+            $table->string('training_program_pdf_path')->nullable()->after('sort_order');
         });
     }
 
@@ -21,7 +21,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('players', function (Blueprint $table) {
+        Schema::table('program_templates', function (Blueprint $table) {
             $table->dropColumn('training_program_pdf_path');
         });
     }

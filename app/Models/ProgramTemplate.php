@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProgramTemplate extends Model
 {
-    protected $fillable = ['type', 'name', 'description', 'goal', 'sort_order'];
+    protected $fillable = ['type', 'name', 'description', 'goal', 'sort_order', 'training_program_pdf_path'];
 
     public function phases(): HasMany
     {
