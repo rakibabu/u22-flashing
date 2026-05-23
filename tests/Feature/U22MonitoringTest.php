@@ -3,6 +3,7 @@
 use App\Livewire\Coach\Dashboard;
 use App\Livewire\Coach\Players\CheckinPreview;
 use App\Livewire\Coach\Players\Create;
+use App\Livewire\Coach\Players\Index;
 use App\Livewire\Coach\Players\Show;
 use App\Livewire\Player\Checkin;
 use App\Models\CoachNote;
@@ -104,6 +105,24 @@ test('coach kan trainingsprogramma pdf per type uploaden', function () {
 
     expect($template->training_program_pdf_path)->not->toBeNull();
     Storage::disk('local')->assertExists($template->training_program_pdf_path);
+});
+
+test('coach kan ontbrekende standaard programma templates aanmaken', function () {
+    expect(ProgramTemplate::query()->count())->toBe(0);
+
+    Livewire::actingAs(coachUser())
+        ->test(Index::class)
+        ->assertSee("Standaard programma's aanmaken", false)
+        ->call('createDefaultProgramTemplates')
+        ->assertSet('programTemplatesCreated', true)
+        ->assertSee('Trainingstype A: Conditie')
+        ->assertSee('Trainingstype B: Bulk, kracht en spiermassa')
+        ->assertSee('Trainingstype C: Conditie en kracht onderhoud');
+
+    expect(ProgramTemplate::query()->count())->toBe(3)
+        ->and(ProgramTemplate::query()->where('type', Player::Conditioning)->exists())->toBeTrue()
+        ->and(ProgramTemplate::query()->where('type', Player::MuscleGain)->exists())->toBeTrue()
+        ->and(ProgramTemplate::query()->where('type', Player::Maintenance)->exists())->toBeTrue();
 });
 
 test('invite-link werkt een keer en speler kan wachtwoord instellen', function () {

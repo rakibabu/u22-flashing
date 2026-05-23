@@ -36,30 +36,9 @@ class DatabaseSeeder extends Seeder
      */
     private function seedProgramTemplates(): array
     {
-        $data = [
-            Player::Conditioning => [
-                'name' => 'Trainingstype A: Conditie',
-                'description' => 'PDF-basis met extra aandacht voor basketbalgerichte conditie, herhaald sprintvermogen, herstelvermogen en explosiviteit.',
-                'goal' => '2x kracht, 2x conditie/pickup, 3x 8 minuten blessurepreventie en minimaal 1 volledige rustdag per week.',
-                'sort_order' => 1,
-            ],
-            Player::MuscleGain => [
-                'name' => 'Trainingstype B: Bulk, kracht en spiermassa',
-                'description' => 'Persoonlijk spiermassa-traject voor spelers die kracht, massa en belastbaarheid moeten opbouwen. Gewicht is een meetmiddel; sterker, explosief en blessurevrij blijven is leidend.',
-                'goal' => '3x kracht, maandagpickup als basketbalconditie, maximaal 1 korte extra prikkel als pickup wegvalt, 3x preventie, minimaal 3000 kcal, 120-130g eiwit en 66-68 kg richting 17 augustus.',
-                'sort_order' => 2,
-            ],
-            Player::Maintenance => [
-                'name' => 'Trainingstype C: Conditie en kracht onderhoud',
-                'description' => 'Fit blijven, conditie onderhouden, kracht behouden en fris klaar zijn voor 17 augustus.',
-                'goal' => '2x kracht, 2x conditie/pickup, 3x 8 minuten blessurepreventie en minimaal 1 volledige rustdag per week.',
-                'sort_order' => 3,
-            ],
-        ];
-
         $templates = [];
 
-        foreach ($data as $type => $attributes) {
+        foreach (ProgramTemplate::defaultRows() as $type => $attributes) {
             $template = ProgramTemplate::query()->updateOrCreate(['type' => $type], $attributes);
             $templates[$type] = $template;
 

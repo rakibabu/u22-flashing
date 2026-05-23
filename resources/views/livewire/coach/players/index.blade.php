@@ -14,6 +14,23 @@
             </p>
         </div>
 
+        @if ($missingProgramTemplateCount > 0)
+            <div class="mt-4 flex flex-col gap-3 rounded-lg border border-flash-orange/30 bg-flash-orange/10 p-3 text-primary-900 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm">
+                    Er ontbreken {{ $missingProgramTemplateCount }} standaard trainingstype(s).
+                </p>
+                <flux:button type="button" size="sm" variant="primary" wire:click="createDefaultProgramTemplates">
+                    Standaard programma's aanmaken
+                </flux:button>
+            </div>
+        @endif
+
+        @if ($programTemplatesCreated)
+            <p class="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
+                Standaard programma's aangemaakt.
+            </p>
+        @endif
+
         <div class="mt-4 grid gap-3 md:grid-cols-3">
             @foreach ($programTemplates as $template)
                 <form

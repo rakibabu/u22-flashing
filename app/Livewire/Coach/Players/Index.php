@@ -19,6 +19,8 @@ class Index extends Component
 
     public ?string $teamInviteLink = null;
 
+    public bool $programTemplatesCreated = false;
+
     public function generateTeamInvite(): void
     {
         TeamInvite::query()
@@ -52,10 +54,26 @@ class Index extends Component
         $this->inviteLinks[$player->id] = route('invite.show', $token);
     }
 
+    public function createDefaultProgramTemplates(): void
+    {
+        $this->authorize('viewAny', Player::class);
+
+        ProgramTemplate::ensureDefaults();
+
+        $this->programTemplatesCreated = true;
+    }
+
     public function render()
     {
+        $programTemplates = ProgramTemplate::query()->orderBy('sort_order')->get();
+        $missingProgramTemplateCount = count(array_diff(
+            array_keys(ProgramTemplate::defaultRows()),
+            $programTemplates->pluck('type')->all(),
+        ));
+
         return view('livewire.coach.players.index', [
-            'programTemplates' => ProgramTemplate::query()->orderBy('sort_order')->get(),
+            'programTemplates' => $programTemplates,
+            'missingProgramTemplateCount' => $missingProgramTemplateCount,
             'players' => Player::query()
                 ->with('latestInvite')
                 ->when($this->search, fn ($query) => $query->where('name', 'like', '%'.$this->search.'%'))
