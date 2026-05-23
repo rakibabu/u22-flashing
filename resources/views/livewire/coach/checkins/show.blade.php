@@ -52,7 +52,7 @@
             <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
                 <div><dt class="text-zinc-500">Slaap</dt><dd class="font-medium">{{ $checkin->sleep_avg_hours ?? 'n.v.t.' }}</dd></div>
                 <div><dt class="text-zinc-500">Energie</dt><dd class="font-medium">{{ $checkin->energy_score ?? 'n.v.t.' }}</dd></div>
-                <div><dt class="text-zinc-500">Spierpijn/vermoeidheid</dt><dd class="font-medium">{{ $checkin->soreness_score ?? 'n.v.t.' }}</dd></div>
+                <div><dt class="text-zinc-500">Spierpijn</dt><dd class="font-medium">{{ $checkin->sorenessDisplay() }}</dd></div>
                 <div><dt class="text-zinc-500">Pijn</dt><dd class="font-medium">{{ $checkin->pain ? 'Ja' : 'Nee' }}</dd></div>
             </dl>
             @if ($checkin->pain)

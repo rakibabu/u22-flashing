@@ -55,7 +55,10 @@ class WeeklyCheckin extends Model
             'pickup_thursday' => 'boolean',
             'had_full_rest_day' => 'boolean',
             'sleep_avg_hours' => 'decimal:2',
+            'energy_score' => 'integer',
+            'soreness_score' => 'integer',
             'pain' => 'boolean',
+            'rpe_highest' => 'integer',
             'total_training_minutes' => 'integer',
             'highest_session_rpe' => 'integer',
             'calculated_training_load' => 'integer',
@@ -70,5 +73,31 @@ class WeeklyCheckin extends Model
     public function player(): BelongsTo
     {
         return $this->belongsTo(Player::class);
+    }
+
+    public function sorenessLabel(): ?string
+    {
+        if ($this->soreness_score === null) {
+            return null;
+        }
+
+        if ($this->soreness_score <= 3) {
+            return 'lichte spierpijn';
+        }
+
+        if ($this->soreness_score <= 6) {
+            return 'matige spierpijn';
+        }
+
+        return 'zware spierpijn';
+    }
+
+    public function sorenessDisplay(): string
+    {
+        if ($this->soreness_score === null) {
+            return 'n.v.t.';
+        }
+
+        return "{$this->soreness_score}/10 {$this->sorenessLabel()}";
     }
 }

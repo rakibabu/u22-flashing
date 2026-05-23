@@ -8,5 +8,16 @@
         </div>
     @endif
 
-    <x-checkin-form :player="$player" :form="$form" :step="$step" :max-step="$maxStep" :autosaved="$autosaved" :autosaved-at="$autosavedAt" :step-error="$stepError" />
+    <x-checkin-form
+        :player="$player"
+        :form="$form"
+        :step="$step"
+        :max-step="$maxStep"
+        :autosaved="$autosaved"
+        :autosaved-at="$autosavedAt"
+        :step-error="$stepError"
+        :validation-scroll-field="$validationScrollField"
+        :validation-scroll-tick="$validationScrollTick"
+        :saved="$saved"
+    />
 </div>

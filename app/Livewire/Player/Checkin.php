@@ -53,6 +53,10 @@ class Checkin extends Component
 
     public ?string $stepError = null;
 
+    public ?string $validationScrollField = null;
+
+    public int $validationScrollTick = 0;
+
     public int $step = 1;
 
     public function mount(): void
@@ -70,15 +74,7 @@ class Checkin extends Component
 
     public function nextStep(): void
     {
-        try {
-            $this->validate($this->rulesForStep($this->step), $this->messages(), $this->validationAttributes());
-        } catch (ValidationException $exception) {
-            $this->stepError = $this->stepErrorMessage($this->step);
-
-            throw $exception;
-        }
-
-        $this->stepError = null;
+        $this->validateStep($this->step);
         $this->step = min($this->step + 1, $this->maxStep());
     }
 
@@ -89,7 +85,21 @@ class Checkin extends Component
 
     public function goToStep(int $step): void
     {
-        $this->step = max(1, min($step, $this->maxStep()));
+        $targetStep = max(1, min($step, $this->maxStep()));
+
+        if ($targetStep <= $this->step) {
+            $this->stepError = null;
+            $this->step = $targetStep;
+
+            return;
+        }
+
+        for ($stepToValidate = $this->step; $stepToValidate < $targetStep; $stepToValidate++) {
+            $this->step = $stepToValidate;
+            $this->validateStep($stepToValidate);
+        }
+
+        $this->step = $targetStep;
     }
 
     public function updatedForm(mixed $value, ?string $key = null): void
@@ -102,7 +112,9 @@ class Checkin extends Component
             $this->form[$key] = null;
         }
 
+        $this->resetValidation("form.{$key}");
         $this->stepError = null;
+        $this->validationScrollField = null;
 
         if ($key === 'protein_target_days') {
             $this->form['protein_status'] = $this->proteinStatusFromDays($this->form['protein_target_days']);
@@ -120,6 +132,13 @@ class Checkin extends Component
             $validated = $this->validate($this->rules($player), $this->messages(), $this->validationAttributes())['form'];
         } catch (ValidationException $exception) {
             $this->stepError = 'Vul de ontbrekende velden in voordat je de weekcheck verstuurt.';
+            $field = $this->firstValidationErrorField($exception);
+
+            if ($field !== null) {
+                $this->step = $this->stepForField($field, $player);
+            }
+
+            $this->queueValidationScroll($field);
 
             throw $exception;
         }
@@ -451,12 +470,75 @@ class Checkin extends Component
         ]);
     }
 
+    private function validateStep(int $step): void
+    {
+        try {
+            $this->validate($this->rulesForStep($step), $this->messages(), $this->validationAttributes());
+        } catch (ValidationException $exception) {
+            $this->stepError = $this->stepErrorMessage($step);
+            $this->queueValidationScroll($this->firstValidationErrorField($exception));
+
+            throw $exception;
+        }
+
+        $this->stepError = null;
+        $this->validationScrollField = null;
+    }
+
+    private function firstValidationErrorField(ValidationException $exception): ?string
+    {
+        $field = array_key_first($exception->errors());
+
+        if (! is_string($field)) {
+            return null;
+        }
+
+        return str_starts_with($field, 'form.') ? substr($field, 5) : $field;
+    }
+
+    private function queueValidationScroll(?string $field): void
+    {
+        if ($field === null) {
+            return;
+        }
+
+        $this->validationScrollField = $field;
+        $this->validationScrollTick++;
+    }
+
+    private function stepForField(string $field, Player $player): int
+    {
+        if (in_array($field, ['strength_sessions', 'conditioning_sessions', 'mobility_sessions', 'pickup_monday', 'pickup_thursday', 'had_full_rest_day'], true)) {
+            return 1;
+        }
+
+        if (in_array($field, ['sleep_avg_hours', 'energy_score', 'soreness_score', 'pain', 'pain_location', 'pain_notes'], true)) {
+            return 2;
+        }
+
+        if ($player->isMuscleGain() && in_array($field, ['weight_kg', 'kcal_avg', 'protein_status', 'protein_avg_grams', 'protein_target_days', 'protein_notes', 'appetite_score', 'used_mijn_eetmeter', 'used_yazio'], true)) {
+            return 3;
+        }
+
+        if ($player->isConditioning() && in_array($field, ['total_training_minutes', 'highest_session_rpe'], true)) {
+            return 3;
+        }
+
+        return $this->maxStep();
+    }
+
     /**
      * @return array<string, string>
      */
     private function messages(): array
     {
         return [
+            'form.strength_sessions.required' => 'Kies hoeveel krachttrainingen je hebt gedaan.',
+            'form.conditioning_sessions.required' => 'Kies hoeveel conditietrainingen je hebt gedaan.',
+            'form.mobility_sessions.required' => 'Kies hoeveel preventie/mobiliteit je hebt gedaan.',
+            'form.sleep_avg_hours.required' => 'Vul je gemiddelde slaap per nacht in.',
+            'form.energy_score.required' => 'Kies je energiescore.',
+            'form.soreness_score.required' => 'Kies of je spierpijn licht of zwaar voelde.',
             'form.missed_target_reason.required' => 'Kies waarom het niet gelukt is.',
             'form.missed_target_reason_other.required' => 'Vul kort in wat de andere reden is.',
             'form.pain_location.required' => 'Vul in waar de pijn zit.',
@@ -466,8 +548,8 @@ class Checkin extends Component
             'form.protein_avg_grams.required' => 'Vul in hoeveel gram eiwit je gemiddeld haalde.',
             'form.protein_target_days.required' => 'Kies hoeveel dagen je het eiwitdoel haalde.',
             'form.protein_notes.required' => 'Vul kort in wat er wel of niet lukte met eiwit.',
-            'form.appetite_score.required' => 'Vul je eetlustscore in.',
-            'form.highest_session_rpe.required' => 'Vul de zwaarte van je zwaarste sessie in.',
+            'form.appetite_score.required' => 'Kies je eetlustscore.',
+            'form.highest_session_rpe.required' => 'Kies de zwaarte van je zwaarste sessie.',
         ];
     }
 
@@ -482,7 +564,7 @@ class Checkin extends Component
             'form.mobility_sessions' => 'preventie/mobiliteit',
             'form.sleep_avg_hours' => 'slaap',
             'form.energy_score' => 'energie',
-            'form.soreness_score' => 'vermoeidheid/spierpijn',
+            'form.soreness_score' => 'spierpijn',
             'form.total_training_minutes' => 'trainingsminuten',
             'form.highest_session_rpe' => 'zwaarste sessie',
             'form.weight_kg' => 'gewicht',

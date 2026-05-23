@@ -184,6 +184,8 @@ test('coach kan speler weekcheck scherm previewen zonder speleraccount te maken'
         ->assertSee('Training')
         ->assertSee('Aantal keer kracht')
         ->assertSee('Aantal keer extra conditie')
+        ->assertSee('u22-checkin-draft:preview:'.$player->id, false)
+        ->assertSee('restoreDraft()', false)
         ->assertDontSee('Gemiddelde kcal per dag');
 
     Livewire::actingAs($coach)
@@ -193,22 +195,64 @@ test('coach kan speler weekcheck scherm previewen zonder speleraccount te maken'
         ->assertSet('form.mobility_sessions', null)
         ->assertSee('u22-choice-grid-count', false)
         ->assertSee('4+')
-        ->call('goToStep', 2)
+        ->call('nextStep')
+        ->assertSet('step', 1)
+        ->assertHasErrors([
+            'form.strength_sessions' => 'required',
+            'form.conditioning_sessions' => 'required',
+            'form.mobility_sessions' => 'required',
+        ])
+        ->assertSet('validationScrollField', 'strength_sessions')
+        ->assertSee('u22-field-error', false)
+        ->assertSee('data-checkin-field="strength_sessions"', false)
+        ->set('form.strength_sessions', 3)
+        ->set('form.conditioning_sessions', 1)
+        ->set('form.mobility_sessions', 3)
+        ->call('nextStep')
         ->assertSet('step', 2)
-        ->assertSee('Slaap gem. (uur)')
+        ->assertSee('Aantal uur slaap')
+        ->assertSee('Spierpijn')
+        ->assertSee('Licht - zwaar')
+        ->assertDontSee('Spierpijn/vermoeidheid')
+        ->assertDontSee('1 fris, 10 heel zwaar')
+        ->assertSee('u22-sleep-field', false)
         ->assertSee('u22-choice-grid-score', false)
         ->call('goToStep', 99)
-        ->assertSet('step', 4)
-        ->call('goToStep', 1)
-        ->call('nextStep')
-        ->call('nextStep')
+        ->assertSet('step', 2)
+        ->assertHasErrors([
+            'form.sleep_avg_hours' => 'required',
+            'form.energy_score' => 'required',
+            'form.soreness_score' => 'required',
+        ])
+        ->assertSet('validationScrollField', 'sleep_avg_hours')
+        ->set('form.sleep_avg_hours', 7.5)
+        ->set('form.energy_score', 7)
+        ->set('form.soreness_score', 4)
+        ->call('goToStep', 99)
         ->assertSet('step', 3)
-        ->assertSee('Kcal gem.')
+        ->assertHasErrors([
+            'form.weight_kg' => 'required',
+            'form.kcal_avg' => 'required',
+            'form.protein_target_days' => 'required',
+            'form.appetite_score' => 'required',
+        ])
+        ->assertSet('validationScrollField', 'weight_kg')
+        ->assertSee('Kcal gemiddeld')
+        ->assertSee('u22-sleep-field', false)
+        ->assertDontSee('u22-number-tile', false)
         ->assertSee('Hoeveel dagen haalde je')
+        ->set('form.weight_kg', 60.5)
+        ->set('form.kcal_avg', 3200)
+        ->set('form.protein_target_days', 7)
+        ->set('form.appetite_score', 6)
         ->call('nextStep')
+        ->assertSet('step', 4)
         ->assertSee('Opslaan (preview)')
         ->assertSee('Controleer je week')
-        ->assertSee('-/3 keer ingevuld')
+        ->assertSee('4/10')
+        ->assertDontSee('matige spierpijn')
+        ->assertSee('Je zit op schema')
+        ->assertDontSee('De coach ziet hieronder precies waar het wringt')
         ->assertDontSee('Opmerking over conditie of benen')
         ->assertSee('Extra opmerking voor de coach')
         ->call('previousStep')
@@ -231,7 +275,13 @@ test('onderhoudsspeler ziet geen gewicht in checkin preview', function () {
 
     Livewire::actingAs($coach)
         ->test(CheckinPreview::class, ['player' => $player])
+        ->set('form.strength_sessions', 2)
+        ->set('form.conditioning_sessions', 2)
+        ->set('form.mobility_sessions', 3)
         ->call('nextStep')
+        ->set('form.sleep_avg_hours', 7.5)
+        ->set('form.energy_score', 7)
+        ->set('form.soreness_score', 4)
         ->call('nextStep')
         ->assertSet('step', 3)
         ->assertSee('Afronden')
@@ -267,7 +317,13 @@ test('speler kan weekcheck invullen en aanpassen', function () {
     Livewire::actingAs($player->user)
         ->test(Checkin::class)
         ->call('goToStep', 3)
-        ->assertSet('step', 3)
+        ->assertSet('step', 1)
+        ->assertHasErrors([
+            'form.strength_sessions' => 'required',
+            'form.conditioning_sessions' => 'required',
+            'form.mobility_sessions' => 'required',
+        ])
+        ->assertSet('validationScrollField', 'strength_sessions')
         ->call('goToStep', 0)
         ->assertSet('step', 1);
 
@@ -282,6 +338,10 @@ test('speler kan weekcheck invullen en aanpassen', function () {
         ->set('form.sleep_avg_hours', 7.5)
         ->set('form.energy_score', 7)
         ->set('form.soreness_score', 4)
+        ->call('save')
+        ->assertHasErrors(['form.missed_target_reason' => 'required'])
+        ->assertSet('step', 3)
+        ->assertSet('validationScrollField', 'missed_target_reason')
         ->set('form.missed_target_reason', 'geen tijd')
         ->call('save')
         ->assertSet('saved', true);
@@ -310,7 +370,121 @@ test('speler krijgt duidelijke stapmelding bij ontbrekende checkin velden', func
             'form.conditioning_sessions' => 'required',
             'form.mobility_sessions' => 'required',
         ])
+        ->assertSet('validationScrollField', 'strength_sessions')
+        ->assertSet('validationScrollTick', 1)
+        ->assertSee('u22-field-error', false)
+        ->assertSee('data-checkin-field="strength_sessions"', false)
         ->assertSet('stepError', 'Kies eerst hoeveel keer je kracht, conditie en mobiliteit/preventie hebt gedaan.');
+});
+
+test('checkin formulier bewaart concept lokaal voor refresh', function () {
+    $player = playerWithUser();
+
+    $this->actingAs($player->user)->get(route('player.checkin'))
+        ->assertOk()
+        ->assertSee('u22-checkin-draft:player:'.$player->id, false)
+        ->assertSee('recordDraftInput', false)
+        ->assertSee('restoreDraft()', false)
+        ->assertSee('u22CheckinDraftRestored', false)
+        ->assertSee('currentStep !== 1', false)
+        ->assertSee('clearDraft()', false);
+});
+
+test('spierpijn score krijgt duidelijke licht zwaar betekenis', function () {
+    expect(WeeklyCheckin::make(['soreness_score' => 2])->sorenessDisplay())->toBe('2/10 lichte spierpijn')
+        ->and(WeeklyCheckin::make(['soreness_score' => 5])->sorenessDisplay())->toBe('5/10 matige spierpijn')
+        ->and(WeeklyCheckin::make(['soreness_score' => 8])->sorenessDisplay())->toBe('8/10 zware spierpijn');
+});
+
+test('checkboxes zijn optioneel bij volgende stap checkin', function () {
+    $player = playerWithUser();
+
+    Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->set('form.strength_sessions', 2)
+        ->set('form.conditioning_sessions', 2)
+        ->set('form.mobility_sessions', 3)
+        ->call('nextStep')
+        ->assertSet('step', 2)
+        ->assertHasNoErrors([
+            'form.pickup_monday',
+            'form.pickup_thursday',
+            'form.had_full_rest_day',
+        ]);
+});
+
+test('herstel stap toont verplichte velden visueel als ze missen', function () {
+    $player = playerWithUser();
+
+    Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->set('form.strength_sessions', 2)
+        ->set('form.conditioning_sessions', 2)
+        ->set('form.mobility_sessions', 3)
+        ->call('nextStep')
+        ->assertSet('step', 2)
+        ->call('nextStep')
+        ->assertSet('step', 2)
+        ->assertHasErrors([
+            'form.sleep_avg_hours' => 'required',
+            'form.energy_score' => 'required',
+            'form.soreness_score' => 'required',
+        ])
+        ->assertSet('validationScrollField', 'sleep_avg_hours')
+        ->assertSee('u22-field-error', false)
+        ->assertSet('stepError', 'Vul je slaap in en kies je energie- en spierpijnscore.');
+});
+
+test('pijnlocatie foutmelding gebruikt compacte checkin styling', function () {
+    $player = playerWithUser();
+
+    Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->set('form.strength_sessions', 2)
+        ->set('form.conditioning_sessions', 2)
+        ->set('form.mobility_sessions', 3)
+        ->call('nextStep')
+        ->set('form.sleep_avg_hours', 7.5)
+        ->set('form.energy_score', 7)
+        ->set('form.soreness_score', 4)
+        ->set('form.pain', true)
+        ->call('nextStep')
+        ->assertSet('step', 2)
+        ->assertHasErrors(['form.pain_location' => 'required'])
+        ->assertSet('validationScrollField', 'pain_location')
+        ->assertSee('u22-inline-error', false)
+        ->assertSee('Vul in waar de pijn zit.');
+});
+
+test('stapnavigatie springt naar eerste incomplete stap', function () {
+    $player = playerWithUser();
+
+    Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->set('form.strength_sessions', 2)
+        ->set('form.conditioning_sessions', 2)
+        ->set('form.mobility_sessions', 3)
+        ->call('goToStep', 3)
+        ->assertSet('step', 2)
+        ->assertHasErrors([
+            'form.sleep_avg_hours' => 'required',
+            'form.energy_score' => 'required',
+            'form.soreness_score' => 'required',
+        ])
+        ->assertSet('validationScrollField', 'sleep_avg_hours');
+});
+
+test('onrealistische checkin waardes worden geweigerd', function () {
+    $player = playerWithUser();
+
+    Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->set('form.sleep_avg_hours', 100)
+        ->assertHasErrors(['form.sleep_avg_hours' => 'between'])
+        ->set('form.energy_score', 99)
+        ->assertHasErrors(['form.energy_score' => 'between'])
+        ->set('form.total_training_minutes', 3000)
+        ->assertHasErrors(['form.total_training_minutes' => 'between']);
 });
 
 test('speler checkin velden worden automatisch als concept opgeslagen', function () {

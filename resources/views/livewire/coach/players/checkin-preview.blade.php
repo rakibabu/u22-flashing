@@ -11,54 +11,105 @@
     </section>
 
     <section class="u22-target-summary">
-        <div class="flex items-center justify-between gap-3">
-            <p class="text-xs font-semibold uppercase text-primary-800">Targets deze week</p>
-            <p class="text-xs text-zinc-600">Aantal keer</p>
+        <div class="u22-target-summary-head">
+            <div>
+                <p>Weekdoelen</p>
+                <h2>Doelen deze week</h2>
+            </div>
+            <span>{{ $player->programName() }}</span>
         </div>
 
-        <div class="grid grid-cols-3 gap-2">
-            <div class="u22-target-chip">
-                <span>Kracht</span>
-                <strong>{{ $player->settings?->strength_target_per_week ? $player->settings->strength_target_per_week.'x' : 'n.v.t.' }}</strong>
+        <div class="u22-target-group">
+            <div class="u22-target-group-head">
+                <p>Training</p>
+                <span>Aantal keer</span>
             </div>
 
-            <div class="u22-target-chip">
-                <span>Conditie</span>
-                <strong>{{ $player->settings?->conditioning_target_per_week ? $player->settings->conditioning_target_per_week.'x' : 'n.v.t.' }}</strong>
-            </div>
+            <div class="u22-target-grid">
+                <div class="u22-target-chip">
+                    <span>Kracht</span>
+                    <strong>
+                        {{ $player->settings?->strength_target_per_week ?: 'n.v.t.' }}
+                        @if ($player->settings?->strength_target_per_week)
+                            <small>x</small>
+                        @endif
+                    </strong>
+                </div>
 
-            <div class="u22-target-chip">
-                <span>Mobiliteit</span>
-                <strong>{{ $player->settings?->mobility_target_per_week ? $player->settings->mobility_target_per_week.'x' : 'n.v.t.' }}</strong>
+                <div class="u22-target-chip">
+                    <span>Conditie</span>
+                    <strong>
+                        {{ $player->settings?->conditioning_target_per_week ?: 'n.v.t.' }}
+                        @if ($player->settings?->conditioning_target_per_week)
+                            <small>x</small>
+                        @endif
+                    </strong>
+                </div>
+
+                <div class="u22-target-chip">
+                    <span>Mobiliteit</span>
+                    <strong>
+                        {{ $player->settings?->mobility_target_per_week ?: 'n.v.t.' }}
+                        @if ($player->settings?->mobility_target_per_week)
+                            <small>x</small>
+                        @endif
+                    </strong>
+                </div>
             </div>
         </div>
+
+        @if ($player->isMuscleGain())
+            <div class="u22-target-divider"></div>
+
+            <div class="u22-target-group">
+                <div class="u22-target-group-head">
+                    <p>Voeding</p>
+                    <span>Spiermassa</span>
+                </div>
+
+                <div class="u22-target-grid">
+                    <div class="u22-target-chip">
+                        <span>Min kcal</span>
+                        <strong>
+                            {{ $player->settings?->kcal_minimum ?? 'n.v.t.' }}
+                            @if ($player->settings?->kcal_minimum)
+                                <small>kcal</small>
+                            @endif
+                        </strong>
+                    </div>
+
+                    <div class="u22-target-chip">
+                        <span>Gymdag</span>
+                        <strong>
+                            {{ $player->settings?->kcal_training_day ?? 'n.v.t.' }}
+                            @if ($player->settings?->kcal_training_day)
+                                <small>kcal</small>
+                            @endif
+                        </strong>
+                    </div>
+
+                    <div class="u22-target-chip">
+                        <span>Eiwit</span>
+                        <strong class="u22-target-protein">
+                            {{ $player->settings?->protein_target_min && $player->settings?->protein_target_max ? $player->settings->protein_target_min.'-'.$player->settings->protein_target_max : 'n.v.t.' }}
+                            @if ($player->settings?->protein_target_min && $player->settings?->protein_target_max)
+                                <small>g</small>
+                            @endif
+                        </strong>
+                    </div>
+                </div>
+            </div>
+        @endif
     </section>
 
-    @if ($player->isMuscleGain())
-        <section class="u22-target-summary">
-            <div class="flex items-center justify-between gap-3">
-                <p class="text-xs font-semibold uppercase text-primary-800">Voeding targets</p>
-                <p class="text-xs text-zinc-600">Spiermassa</p>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2">
-                <div class="u22-target-chip">
-                    <span>Min kcal</span>
-                    <strong>{{ $player->settings?->kcal_minimum ?? 'n.v.t.' }}</strong>
-                </div>
-
-                <div class="u22-target-chip">
-                    <span>Gymdag</span>
-                    <strong>{{ $player->settings?->kcal_training_day ?? 'n.v.t.' }}</strong>
-                </div>
-
-                <div class="u22-target-chip">
-                    <span>Eiwit</span>
-                    <strong>{{ $player->settings?->protein_target_min && $player->settings?->protein_target_max ? $player->settings->protein_target_min.'-'.$player->settings->protein_target_max.'g' : 'n.v.t.' }}</strong>
-                </div>
-            </div>
-        </section>
-    @endif
-
-    <x-checkin-form :player="$player" :form="$form" :step="$step" :max-step="$maxStep" preview />
+    <x-checkin-form
+        :player="$player"
+        :form="$form"
+        :step="$step"
+        :max-step="$maxStep"
+        :step-error="$stepError"
+        :validation-scroll-field="$validationScrollField"
+        :validation-scroll-tick="$validationScrollTick"
+        preview
+    />
 </div>

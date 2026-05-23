@@ -56,7 +56,7 @@ class PlayerAdviceService
         }
 
         if (($checkin->energy_score ?? 10) <= 4 && ($checkin->soreness_score ?? 0) >= 8) {
-            return $this->result($player, 'red', 'Lage energie en hoge vermoeidheid', 'Belasting omlaag. Vervang een intensieve sessie door zone 2/herstel en slaap bij.', 'Schrap deze week een intensieve prikkel en plan herstel/zone 2.', $compliance, $weightTrend);
+            return $this->result($player, 'red', 'Lage energie en zware spierpijn', 'Belasting omlaag. Vervang een intensieve sessie door zone 2/herstel en slaap bij.', 'Schrap deze week een intensieve prikkel en plan herstel/zone 2.', $compliance, $weightTrend);
         }
 
         if ($player->isMuscleGain()) {
@@ -135,7 +135,7 @@ class PlayerAdviceService
 
         $greenAdvice = $player->isMuscleGain()
             ? 'Goed bezig. Houd 3x kracht, maandagpickup, 3000+ kcal, 120-130g eiwit en je weekgemiddelde gewicht vast.'
-            : 'Goed bezig. Houd 2x kracht, 2x conditie/pickup en 3x preventie vast en blijf pijn of vermoeidheid eerlijk melden.';
+            : 'Goed bezig. Houd 2x kracht, 2x conditie/pickup en 3x preventie vast en blijf pijn of zware spierpijn eerlijk melden.';
 
         return $this->result($player, 'green', 'Op schema', $greenAdvice, 'Geen grote bijsturing nodig; ritme vasthouden.', $compliance, $weightTrend);
     }

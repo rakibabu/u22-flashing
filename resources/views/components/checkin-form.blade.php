@@ -7,12 +7,16 @@
     'autosaved' => false,
     'autosavedAt' => null,
     'stepError' => null,
+    'validationScrollField' => null,
+    'validationScrollTick' => 0,
+    'saved' => false,
 ])
 
 @php
     $isBulk = $player->isMuscleGain();
     $isConditioning = $player->isConditioning();
     $settings = $player->settings;
+    $hasFormError = fn (string $key): bool => $errors->has("form.{$key}");
 
     $steps = [
         ['number' => 1, 'label' => 'Training'],
@@ -113,17 +117,194 @@
         $summaryItems[] = ['label' => 'Minuten', 'value' => $displayValue($form['total_training_minutes'] ?? null)];
         $summaryItems[] = ['label' => 'RPE', 'value' => $displayValue($form['highest_session_rpe'] ?? null, '/10')];
     }
+
+    $draftKey = implode(':', [
+        'u22-checkin-draft',
+        $preview ? 'preview' : 'player',
+        $player->id,
+        now()->startOfWeek()->toDateString(),
+    ]);
 @endphp
 
 <form
+    x-data="{
+        draft: { form: {}, step: @js($step) },
+        draftKey: @js($draftKey),
+        maxStep: @js($maxStep),
+        clampNumberInput(event, includeMin = false) {
+            const input = event.target;
+
+            if (! input.matches('input[type=number]') || input.value === '') {
+                return;
+            }
+
+            const value = Number(input.value);
+
+            if (Number.isNaN(value)) {
+                return;
+            }
+
+            const min = input.min === '' ? null : Number(input.min);
+            const max = input.max === '' ? null : Number(input.max);
+            let nextValue = value;
+
+            if (max !== null && value > max) {
+                nextValue = max;
+            }
+
+            if (includeMin && min !== null && nextValue < min) {
+                nextValue = min;
+            }
+
+            if (nextValue === value) {
+                return;
+            }
+
+            input.value = String(nextValue);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+        clearDraft() {
+            window.localStorage.removeItem(this.draftKey);
+        },
+        fieldName(input) {
+            const model = Array.from(input.attributes).find((attribute) => attribute.name.startsWith('wire:model'))?.value;
+
+            return model && model.startsWith('form.') ? model.substring(5) : null;
+        },
+        formValue(input) {
+            if (input.type === 'checkbox') {
+                return input.checked;
+            }
+
+            if (input.value === '') {
+                return null;
+            }
+
+            return input.value;
+        },
+        persistDraft() {
+            const liveForm = this.$wire?.$get('form') ?? {};
+            const liveStep = Number(this.$wire?.$get('step') ?? this.draft.step ?? 1);
+
+            this.draft = {
+                form: { ...liveForm, ...this.draft.form },
+                step: Math.min(Math.max(liveStep || 1, 1), this.maxStep),
+                savedAt: Date.now(),
+            };
+
+            window.localStorage.setItem(this.draftKey, JSON.stringify(this.draft));
+        },
+        recordDraftInput(event, includeMin = false) {
+            this.clampNumberInput(event, includeMin);
+
+            const input = event.target;
+            const field = this.fieldName(input);
+
+            if (! field) {
+                return;
+            }
+
+            this.draft.form = { ...this.draft.form, [field]: this.formValue(input) };
+            this.persistDraft();
+        },
+        restoreDraft() {
+            window.u22CheckinDraftRestored = window.u22CheckinDraftRestored || {};
+
+            if (window.u22CheckinDraftRestored[this.draftKey]) {
+                return;
+            }
+
+            window.u22CheckinDraftRestored[this.draftKey] = true;
+
+            const currentStep = Number(this.$wire?.$get('step') ?? 1);
+
+            if (currentStep !== 1) {
+                return;
+            }
+
+            const rawDraft = window.localStorage.getItem(this.draftKey);
+
+            if (! rawDraft) {
+                return;
+            }
+
+            try {
+                const storedDraft = JSON.parse(rawDraft);
+
+                if (! storedDraft || typeof storedDraft !== 'object') {
+                    return;
+                }
+
+                this.draft = {
+                    form: storedDraft.form && typeof storedDraft.form === 'object' ? storedDraft.form : {},
+                    step: Math.min(Math.max(Number(storedDraft.step || 1), 1), this.maxStep),
+                    savedAt: storedDraft.savedAt ?? null,
+                };
+
+                if (Object.keys(this.draft.form).length > 0) {
+                    this.$wire.$set('form', { ...(this.$wire.$get('form') ?? {}), ...this.draft.form });
+                }
+
+                if (this.draft.step !== Number(this.$wire.$get('step'))) {
+                    this.$wire.$set('step', this.draft.step);
+                }
+            } catch {
+                this.clearDraft();
+            }
+        },
+        scrollToField(field) {
+            this.$nextTick(() => {
+                window.requestAnimationFrame(() => {
+                    const target = Array.from(this.$el.querySelectorAll('[data-checkin-field]')).find((element) => element.dataset.checkinField === field);
+
+                    if (! target) {
+                        return;
+                    }
+
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    const focusTarget = target.querySelector('input:not([type=hidden]), textarea, select, button');
+
+                    if (focusTarget && ! focusTarget.matches('input[type=radio], input[type=checkbox]')) {
+                        focusTarget.focus({ preventScroll: true });
+
+                        return;
+                    }
+
+                    target.setAttribute('tabindex', '-1');
+                    target.focus({ preventScroll: true });
+                });
+            });
+        },
+        init() {
+            this.restoreDraft();
+        },
+    }"
+    x-on:input="recordDraftInput($event)"
+    x-on:change="recordDraftInput($event)"
+    x-on:blur.capture="recordDraftInput($event, true)"
     @if ($preview)
-        x-data
         x-on:submit.prevent
     @else
         wire:submit="save"
     @endif
     class="u22-form-card u22-checkin-form space-y-6"
 >
+    @if ($saved)
+        <span class="sr-only" aria-hidden="true" x-init="clearDraft()"></span>
+    @else
+        <span class="sr-only" aria-hidden="true" wire:key="checkin-draft-step-{{ $step }}" x-init="persistDraft()"></span>
+    @endif
+
+    @if ($validationScrollField)
+        <span
+            class="sr-only"
+            aria-hidden="true"
+            wire:key="checkin-validation-scroll-{{ $validationScrollTick }}"
+            x-init="scrollToField(@js($validationScrollField))"
+        ></span>
+    @endif
+
     <div class="space-y-4">
         <div class="flex items-center justify-between gap-3">
             <p class="text-sm font-semibold text-primary-800">Stap {{ $step }} van {{ $maxStep }}</p>
@@ -183,7 +364,7 @@
             </div>
 
             <div class="grid gap-4">
-                <div class="u22-choice-block">
+                <div data-checkin-field="strength_sessions" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('strength_sessions')])>
                     <div class="u22-choice-head">
                         <p>Aantal keer kracht</p>
                         <span>Doel {{ $settings?->strength_target_per_week ?? 0 }}x</span>
@@ -199,7 +380,7 @@
                     @error('form.strength_sessions') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
 
-                <div class="u22-choice-block">
+                <div data-checkin-field="conditioning_sessions" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('conditioning_sessions')])>
                     <div class="u22-choice-head">
                         <p>{{ $isBulk ? 'Aantal keer extra conditie' : 'Aantal keer conditie' }}</p>
                         <span>Doel {{ $settings?->conditioning_target_per_week ?? 0 }}x</span>
@@ -215,7 +396,7 @@
                     @error('form.conditioning_sessions') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
 
-                <div class="u22-choice-block">
+                <div data-checkin-field="mobility_sessions" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('mobility_sessions')])>
                     <div class="u22-choice-head">
                         <p>Aantal keer preventie/mobiliteit</p>
                         <span>Doel {{ $settings?->mobility_target_per_week ?? 0 }}x</span>
@@ -271,17 +452,21 @@
                 <p class="mt-1 text-sm text-zinc-600">Kort invullen hoe je lichaam deze week voelde.</p>
             </div>
 
-            <div class="u22-number-grid u22-number-grid-single">
-                <div class="u22-number-tile">
-                    <label class="u22-number-label" for="checkin-sleep">Slaap gem. (uur)</label>
-                    <input id="checkin-sleep" class="u22-number-input" wire:model.live.debounce.400ms="form.sleep_avg_hours" type="number" min="0" max="12" step="0.1" inputmode="decimal" placeholder="-">
-                    <p class="u22-number-hint">Per nacht</p>
-                    @error('form.sleep_avg_hours') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+            <div data-checkin-field="sleep_avg_hours" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('sleep_avg_hours')])>
+                <div class="u22-choice-head">
+                    <p>Aantal uur slaap</p>
+                    <span>Gemiddeld per nacht</span>
                 </div>
+
+                <label class="u22-sleep-field" for="checkin-sleep">
+                    <input id="checkin-sleep" class="u22-sleep-input" wire:model.live.debounce.400ms="form.sleep_avg_hours" type="number" min="0" max="12" step="0.1" inputmode="decimal" placeholder="-">
+                    <span>uur</span>
+                </label>
+                @error('form.sleep_avg_hours') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
 
             <div class="grid gap-4">
-                <div class="u22-choice-block">
+                <div data-checkin-field="energy_score" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('energy_score')])>
                     <div class="u22-choice-head">
                         <p>Energie</p>
                         <span>1 laag, 10 top</span>
@@ -297,10 +482,10 @@
                     @error('form.energy_score') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
 
-                <div class="u22-choice-block">
+                <div data-checkin-field="soreness_score" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('soreness_score')])>
                     <div class="u22-choice-head">
-                        <p>Spierpijn/vermoeidheid</p>
-                        <span>1 fris, 10 heel zwaar</span>
+                        <p>Spierpijn</p>
+                        <span>Licht - zwaar</span>
                     </div>
                     <div class="u22-choice-grid u22-choice-grid-score">
                         @foreach ($scoreOptions as $value)
@@ -324,12 +509,33 @@
 
             @if ($form['pain'])
                 <div class="grid gap-4 rounded-2xl border border-red-100 bg-red-50 p-4">
-                    <div>
-                        <flux:input wire:model.live.debounce.500ms="form.pain_location" label="Waar zit de pijn?" :loading="false" />
-                        @error('form.pain_location') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    <div data-checkin-field="pain_location" class="space-y-2">
+                        <label for="pain_location" class="block text-base font-semibold leading-tight text-primary-900">
+                            Waar zit de pijn?
+                        </label>
+                        <input
+                            id="pain_location"
+                            type="text"
+                            wire:model.live.debounce.500ms="form.pain_location"
+                            @class([
+                                'w-full rounded-xl border bg-white px-4 py-3 text-base leading-tight text-primary-900 shadow-sm outline-hidden transition focus:border-primary-300 focus:ring-2 focus:ring-primary-100',
+                                'border-red-500 focus:border-red-500 focus:ring-red-100' => $hasFormError('pain_location'),
+                                'border-primary-100' => ! $hasFormError('pain_location'),
+                            ])
+                        >
+                        @error('form.pain_location')
+                            <p class="u22-inline-error">
+                                <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M9.401 3.003c.27-.467.928-.467 1.198 0l7.355 12.75c.268.465-.066 1.047-.599 1.047H2.645c-.533 0-.867-.582-.599-1.047l7.355-12.75ZM10 7.4c.414 0 .75.336.75.75v3.1a.75.75 0 0 1-1.5 0v-3.1c0-.414.336-.75.75-.75Zm0 6.9a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Z" clip-rule="evenodd" />
+                                </svg>
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
                     </div>
 
-                    <flux:textarea wire:model.live.debounce.750ms="form.pain_notes" label="Korte toelichting pijn" rows="3" />
+                    <div data-checkin-field="pain_notes">
+                        <flux:textarea wire:model.live.debounce.750ms="form.pain_notes" label="Korte toelichting pijn" rows="3" />
+                    </div>
                 </div>
             @endif
         </section>
@@ -345,22 +551,32 @@
             </div>
 
             <div class="u22-number-grid u22-number-grid-two">
-                <div class="u22-number-tile">
-                    <label class="u22-number-label" for="checkin-weight">Gewicht</label>
-                    <input id="checkin-weight" class="u22-number-input" wire:model.live.debounce.400ms="form.weight_kg" type="number" min="40" max="160" step="0.1" inputmode="decimal" placeholder="-">
-                    <p class="u22-number-hint">kg</p>
+                <div data-checkin-field="weight_kg" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('weight_kg')])>
+                    <div class="u22-choice-head">
+                        <p>Gewicht</p>
+                        <span>Vandaag</span>
+                    </div>
+                    <label class="u22-sleep-field" for="checkin-weight">
+                        <input id="checkin-weight" class="u22-sleep-input" wire:model.live.debounce.400ms="form.weight_kg" type="number" min="40" max="160" step="0.1" inputmode="decimal" placeholder="-">
+                        <span>kg</span>
+                    </label>
                     @error('form.weight_kg') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
 
-                <div class="u22-number-tile">
-                    <label class="u22-number-label" for="checkin-kcal">Kcal gem.</label>
-                    <input id="checkin-kcal" class="u22-number-input" wire:model.live.debounce.400ms="form.kcal_avg" type="number" min="1000" max="6000" inputmode="numeric" placeholder="-">
-                    <p class="u22-number-hint">Per dag</p>
+                <div data-checkin-field="kcal_avg" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('kcal_avg')])>
+                    <div class="u22-choice-head">
+                        <p>Kcal gemiddeld</p>
+                        <span>Per dag</span>
+                    </div>
+                    <label class="u22-sleep-field" for="checkin-kcal">
+                        <input id="checkin-kcal" class="u22-sleep-input" wire:model.live.debounce.400ms="form.kcal_avg" type="number" min="1000" max="6000" inputmode="numeric" placeholder="-">
+                        <span>kcal</span>
+                    </label>
                     @error('form.kcal_avg') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
             </div>
 
-            <div class="u22-choice-block">
+            <div data-checkin-field="appetite_score" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('appetite_score')])>
                 <div class="u22-choice-head">
                     <p>Eetlust</p>
                     <span>1 laag, 10 veel trek</span>
@@ -376,7 +592,7 @@
                 @error('form.appetite_score') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            <div class="u22-choice-block">
+            <div data-checkin-field="protein_target_days" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('protein_target_days')])>
                 <div class="u22-choice-head">
                     <p>Hoeveel dagen haalde je {{ $settings?->protein_target_min ?? 120 }}-{{ $settings?->protein_target_max ?? 130 }}g eiwit?</p>
                     <span>0-7 dagen</span>
@@ -399,15 +615,20 @@
 
                     <div class="mt-4 grid gap-3">
                         <div class="u22-number-grid u22-number-grid-single">
-                            <div class="u22-number-tile">
-                                <label class="u22-number-label" for="checkin-protein-grams">Gem. eiwit</label>
-                                <input id="checkin-protein-grams" class="u22-number-input" wire:model.live.debounce.400ms="form.protein_avg_grams" type="number" min="0" max="250" inputmode="numeric" placeholder="-">
-                                <p class="u22-number-hint">Gram per dag</p>
+                            <div data-checkin-field="protein_avg_grams" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('protein_avg_grams')])>
+                                <div class="u22-choice-head">
+                                    <p>Gemiddeld eiwit</p>
+                                    <span>Per dag</span>
+                                </div>
+                                <label class="u22-sleep-field" for="checkin-protein-grams">
+                                    <input id="checkin-protein-grams" class="u22-sleep-input" wire:model.live.debounce.400ms="form.protein_avg_grams" type="number" min="0" max="250" inputmode="numeric" placeholder="-">
+                                    <span>gram</span>
+                                </label>
                                 @error('form.protein_avg_grams') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                             </div>
                         </div>
 
-                        <div>
+                        <div data-checkin-field="protein_notes">
                             <flux:textarea wire:model.live.debounce.750ms="form.protein_notes" label="Wat lukte wel/niet met eiwit?" rows="3" />
                             @error('form.protein_notes') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
@@ -441,15 +662,20 @@
             </div>
 
             <div class="u22-number-grid u22-number-grid-single">
-                <div class="u22-number-tile">
-                    <label class="u22-number-label" for="checkin-training-minutes">Totale trainingsminuten</label>
-                    <input id="checkin-training-minutes" class="u22-number-input" wire:model.live.debounce.400ms="form.total_training_minutes" type="number" min="0" max="2000" inputmode="numeric" placeholder="-">
-                    <p class="u22-number-hint">Deze week</p>
+                <div data-checkin-field="total_training_minutes" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('total_training_minutes')])>
+                    <div class="u22-choice-head">
+                        <p>Totale trainingsminuten</p>
+                        <span>Deze week</span>
+                    </div>
+                    <label class="u22-sleep-field" for="checkin-training-minutes">
+                        <input id="checkin-training-minutes" class="u22-sleep-input" wire:model.live.debounce.400ms="form.total_training_minutes" type="number" min="0" max="2000" inputmode="numeric" placeholder="-">
+                        <span>min</span>
+                    </label>
                     @error('form.total_training_minutes') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
             </div>
 
-            <div class="u22-choice-block">
+            <div data-checkin-field="highest_session_rpe" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('highest_session_rpe')])>
                 <div class="u22-choice-head">
                     <p>Zwaarste sessie</p>
                     <span>RPE 1-10</span>
@@ -487,7 +713,7 @@
             @if ($underTarget)
                 <div class="rounded-2xl border border-flash-orange/25 bg-flash-orange/10 p-4 text-primary-900">
                     <p class="font-semibold">Nog niet alles uit je weekdoel is gehaald</p>
-                    <p class="mt-1 text-sm text-primary-800">De coach ziet hieronder precies waar het wringt. Kies daarna de belangrijkste reden.</p>
+                    <p class="mt-1 text-sm text-primary-800">Dit zijn de punten onder je target. Kies de belangrijkste reden.</p>
                     <ul class="mt-3 space-y-1 text-sm text-primary-900">
                         @foreach ($underTargetReasons as $reason)
                             <li class="flex gap-2" wire:key="under-target-{{ md5($reason) }}">
@@ -498,7 +724,7 @@
                     </ul>
                 </div>
 
-                <div>
+                <div data-checkin-field="missed_target_reason">
                     <flux:select wire:model.live="form.missed_target_reason" label="Belangrijkste reden dat dit niet lukte">
                         <flux:select.option value="">Kies reden</flux:select.option>
                         @foreach ($reasonOptions as $value => $label)
@@ -509,7 +735,7 @@
                 </div>
 
                 @if (($form['missed_target_reason'] ?? null) === 'anders')
-                    <div>
+                    <div data-checkin-field="missed_target_reason_other">
                         <flux:input wire:model.live.debounce.500ms="form.missed_target_reason_other" label="Andere reden" :loading="false" />
                         @error('form.missed_target_reason_other') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                     </div>
@@ -520,8 +746,10 @@
                 </div>
             @endif
 
-            <flux:textarea wire:model.live.debounce.750ms="form.notes" rows="4" :label="$isBulk ? 'Extra opmerking voor de coach over training of eten' : 'Extra opmerking voor de coach'" />
-            @error('form.notes') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+            <div data-checkin-field="notes">
+                <flux:textarea wire:model.live.debounce.750ms="form.notes" rows="4" :label="$isBulk ? 'Extra opmerking voor de coach over training of eten' : 'Extra opmerking voor de coach'" />
+                @error('form.notes') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+            </div>
         </section>
     @endif
 
