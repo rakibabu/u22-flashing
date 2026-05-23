@@ -16,16 +16,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::query()->updateOrCreate(
-            ['email' => 'coach@example.test'],
-            [
-                'name' => 'Coach Flashing Heiloo',
-                'username' => 'coach',
-                'password' => 'password',
-                'role' => 'coach',
-                'email_verified_at' => now(),
-            ],
-        );
+        $this->call(CoachUserSeeder::class);
 
         $templates = $this->seedProgramTemplates();
         $this->seedExerciseLibrary();
@@ -266,7 +257,7 @@ class DatabaseSeeder extends Seeder
 
     private function seedNotes($players): void
     {
-        $coach = User::query()->where('email', 'coach@example.test')->firstOrFail();
+        $coach = User::query()->where('email', CoachUserSeeder::EMAIL)->firstOrFail();
 
         foreach ($players->take(2) as $player) {
             CoachNote::query()->updateOrCreate(
