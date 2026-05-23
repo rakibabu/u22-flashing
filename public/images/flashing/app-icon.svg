@@ -1,0 +1,16 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Flashing app-icon voor "any" purpose (browsers, apple-touch-icon, PWA
+       niet-maskable). F is ~45% van canvas — ruim zichtbaar maar met adem
+       rondom zodat het niet "vastzit" tegen de randen. -->
+  <rect width="512" height="512" rx="96" fill="#0F0B3E"/>
+  <g fill="#ffffff">
+    <!-- Vertical bar -->
+    <rect x="172" y="160" width="52" height="192"/>
+    <!-- Top bar -->
+    <rect x="172" y="160" width="168" height="48"/>
+    <!-- Middle bar -->
+    <rect x="172" y="232" width="120" height="40"/>
+  </g>
+  <!-- Oranje accent onder de F -->
+  <rect x="172" y="374" width="72" height="20" rx="6" fill="#DF6E28"/>
+</svg>

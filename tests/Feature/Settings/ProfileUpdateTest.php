@@ -9,6 +9,18 @@ test('profile page is displayed', function () {
     $this->get(route('profile.edit'))->assertOk();
 });
 
+test('appearance settings are disabled for the light only interface', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('profile.edit'))
+        ->assertOk()
+        ->assertDontSee('Appearance');
+
+    $this->get(route('appearance.edit'))
+        ->assertRedirect(route('profile.edit'));
+});
+
 test('profile information can be updated', function () {
     $user = User::factory()->create();
 

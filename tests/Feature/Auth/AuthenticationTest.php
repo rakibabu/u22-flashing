@@ -6,7 +6,11 @@ use Laravel\Fortify\Features;
 test('login screen can be rendered', function () {
     $response = $this->get(route('login'));
 
-    $response->assertOk();
+    $response
+        ->assertOk()
+        ->assertSee('/fonts/inter-var-latin.woff2')
+        ->assertSee('/fonts/bebas-neue-400.woff2')
+        ->assertSee('/images/flashing/logo-white.svg');
 });
 
 test('users can authenticate using the login screen', function () {
