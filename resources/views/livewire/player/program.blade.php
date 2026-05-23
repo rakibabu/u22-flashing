@@ -48,17 +48,33 @@
         </div>
     @endif
 
-    <section class="space-y-4">
-        <h2 class="text-lg font-semibold">Oefenbibliotheek</h2>
-        @foreach ($exercises as $category => $items)
-            <div class="space-y-2" wire:key="category-{{ $category }}">
-                <h3 class="font-medium text-orange-600">{{ $category }}</h3>
-                <div class="grid gap-3 md:grid-cols-2">
-                    @foreach ($items as $item)
-                        <x-program-card :title="$item->name" :body="$item->description.' '.$item->execution.' Cue: '.$item->coaching_cues" wire:key="exercise-{{ $item->id }}" />
-                    @endforeach
-                </div>
+    @if ($hasTrainingProgramPdf)
+        <section class="space-y-3">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <h2 class="text-lg font-semibold">Jouw persoonlijke trainingsprogramma</h2>
+                <flux:button size="sm" :href="route('player.program.pdf')" target="_blank">Open PDF</flux:button>
             </div>
-        @endforeach
-    </section>
+            <iframe
+                src="{{ route('player.program.pdf') }}"
+                title="Persoonlijk trainingsprogramma"
+                class="h-[75vh] w-full rounded-lg border border-zinc-200 bg-white dark:border-zinc-800"
+            ></iframe>
+        </section>
+    @endif
+
+    @if ($exercises->isNotEmpty())
+        <section class="space-y-4">
+            <h2 class="text-lg font-semibold">Oefenbibliotheek</h2>
+            @foreach ($exercises as $category => $items)
+                <div class="space-y-2" wire:key="category-{{ $category }}">
+                    <h3 class="font-medium text-orange-600">{{ $category }}</h3>
+                    <div class="grid gap-3 md:grid-cols-2">
+                        @foreach ($items as $item)
+                            <x-program-card :title="$item->name" :body="$item->description.' '.$item->execution.' Cue: '.$item->coaching_cues" wire:key="exercise-{{ $item->id }}" />
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
+        </section>
+    @endif
 </div>

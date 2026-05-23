@@ -12,7 +12,17 @@
             <flux:input wire:model="form.height_cm" type="number" label="Lengte cm" />
             <flux:input wire:model="form.start_weight_kg" type="number" step="0.1" label="Startgewicht" />
         </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <flux:input wire:model="form.target_weight_kg" type="number" step="0.1" label="Doelgewicht" />
+            <flux:input wire:model="form.long_term_target_weight_kg" type="number" step="0.1" label="Lange termijn" />
+        </div>
         <flux:textarea wire:model="form.notes" label="Notities" />
+        <div class="space-y-2">
+            <flux:input wire:model="training_program_pdf" type="file" label="Persoonlijk trainingsprogramma PDF" accept="application/pdf" />
+            @if ($player->training_program_pdf_path)
+                <flux:button size="sm" :href="route('coach.players.program-pdf', $player)" target="_blank">Huidige PDF bekijken</flux:button>
+            @endif
+        </div>
         <flux:button type="submit" variant="primary">Opslaan</flux:button>
     </form>
 </div>

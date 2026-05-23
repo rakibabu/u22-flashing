@@ -32,6 +32,7 @@ class Player extends Model
         'target_weight_kg',
         'long_term_target_weight_kg',
         'notes',
+        'training_program_pdf_path',
     ];
 
     protected function casts(): array

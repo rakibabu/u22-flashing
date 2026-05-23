@@ -5,12 +5,15 @@ namespace App\Livewire\Coach\Players;
 use App\Models\Invite;
 use App\Models\Player;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class Create extends Component
 {
     use AuthorizesRequests;
+    use WithFileUploads;
 
     public string $name = '';
 
@@ -28,6 +31,8 @@ class Create extends Component
 
     public ?string $notes = null;
 
+    public $training_program_pdf = null;
+
     public function save()
     {
         $this->authorize('create', Player::class);
@@ -41,9 +46,19 @@ class Create extends Component
             'target_weight_kg' => ['nullable', 'numeric', 'between:40,160'],
             'long_term_target_weight_kg' => ['nullable', 'numeric', 'between:40,160'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'training_program_pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ]);
 
+        unset($validated['training_program_pdf']);
+
         $player = Player::query()->create($validated + ['active' => true]);
+
+        if ($this->training_program_pdf) {
+            $player->update([
+                'training_program_pdf_path' => $this->storeTrainingProgramPdf($player),
+            ]);
+        }
+
         $this->createDefaultSettings($player);
         [, $token] = Invite::createForPlayer($player);
         session()->flash('invite_link', route('invite.show', $token));
@@ -65,5 +80,12 @@ class Create extends Component
         };
 
         $player->settings()->create($settings);
+    }
+
+    private function storeTrainingProgramPdf(Player $player): string
+    {
+        $filename = Str::slug($player->name).'-programma-'.now()->format('YmdHis').'.pdf';
+
+        return $this->training_program_pdf->storeAs("player-programs/{$player->id}", $filename, 'local');
     }
 }

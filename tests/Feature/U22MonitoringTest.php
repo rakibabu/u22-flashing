@@ -3,6 +3,7 @@
 use App\Livewire\Coach\Dashboard;
 use App\Livewire\Coach\Players\CheckinPreview;
 use App\Livewire\Coach\Players\Create;
+use App\Livewire\Coach\Players\Edit;
 use App\Livewire\Coach\Players\Show;
 use App\Livewire\Player\Checkin;
 use App\Models\CoachNote;
@@ -14,6 +15,8 @@ use App\Models\ProgramTemplate;
 use App\Models\User;
 use App\Models\WeeklyCheckin;
 use App\Services\PlayerAdviceService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 function coachUser(): User
@@ -78,6 +81,24 @@ test('coach maakt muscle gain speler aan met persoonlijke bulk defaults', functi
         ->and($player->settings->kcal_pickup_day)->toBe(3600)
         ->and($player->settings->protein_target_min)->toBe(120)
         ->and($player->settings->notes)->toContain('3x kracht');
+});
+
+test('coach kan persoonlijke trainingsprogramma pdf uploaden', function () {
+    Storage::fake('local');
+
+    $player = playerWithUser(['name' => 'Pdf Speler']);
+    $pdf = UploadedFile::fake()->create('programma.pdf', 20, 'application/pdf');
+
+    Livewire::actingAs(coachUser())
+        ->test(Edit::class, ['player' => $player])
+        ->set('training_program_pdf', $pdf)
+        ->call('save')
+        ->assertRedirect(route('coach.players.show', $player, absolute: false));
+
+    $player->refresh();
+
+    expect($player->training_program_pdf_path)->not->toBeNull();
+    Storage::disk('local')->assertExists($player->training_program_pdf_path);
 });
 
 test('invite-link werkt een keer en speler kan wachtwoord instellen', function () {
@@ -159,6 +180,57 @@ test('coach kan een volledige check-in bekijken', function () {
         ->assertSee('Volledige rustdag')
         ->assertSee('Nee')
         ->assertSee('Goede week, benen waren fris.');
+});
+
+test('coach ziet weekchecks van alle spelers en weken', function () {
+    $first = playerWithUser(['name' => 'Eerste Weekspeler']);
+    $second = playerWithUser(['name' => 'Tweede Weekspeler']);
+
+    WeeklyCheckin::query()->create([
+        'player_id' => $first->id,
+        'week_start_date' => now()->startOfWeek()->subWeek()->toDateString(),
+        'strength_sessions' => 2,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'submitted_at' => now(),
+    ]);
+
+    WeeklyCheckin::query()->create([
+        'player_id' => $second->id,
+        'week_start_date' => now()->startOfWeek()->toDateString(),
+        'strength_sessions' => 1,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'submitted_at' => now(),
+    ]);
+
+    $this->actingAs(coachUser())->get(route('coach.checkins.index'))
+        ->assertOk()
+        ->assertSee('Eerste Weekspeler')
+        ->assertSee('Tweede Weekspeler')
+        ->assertSee(now()->startOfWeek()->subWeek()->format('d-m-Y'))
+        ->assertSee(now()->startOfWeek()->format('d-m-Y'));
+});
+
+test('speler ziet persoonlijke programma pdf en geen lege oefenbibliotheek', function () {
+    Storage::fake('local');
+
+    $player = playerWithUser([
+        'name' => 'Programma Pdf Speler',
+        'training_program_pdf_path' => 'player-programs/1/programma.pdf',
+    ]);
+
+    Storage::disk('local')->put($player->training_program_pdf_path, '%PDF-1.4 test');
+
+    $this->actingAs($player->user)->get(route('player.program'))
+        ->assertOk()
+        ->assertSee('Jouw persoonlijke trainingsprogramma')
+        ->assertSee(route('player.program.pdf'), false)
+        ->assertDontSee('Oefenbibliotheek');
+
+    $this->actingAs($player->user)->get(route('player.program.pdf'))
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf');
 });
 
 test('coach kan speler weekcheck scherm previewen zonder speleraccount te maken', function () {
@@ -344,7 +416,10 @@ test('speler kan weekcheck invullen en aanpassen', function () {
         ->assertSet('validationScrollField', 'missed_target_reason')
         ->set('form.missed_target_reason', 'geen tijd')
         ->call('save')
-        ->assertSet('saved', true);
+        ->assertSet('saved', true)
+        ->assertSee('Bedankt, je check-in is opgeslagen.')
+        ->assertSee('Elke zondag kun je via Weekcheck opnieuw invullen')
+        ->assertDontSee('Verstuur weekcheck');
 
     expect($player->checkins()->count())->toBe(1);
     expect($player->checkins()->first()->calculated_training_load)->toBe(720);

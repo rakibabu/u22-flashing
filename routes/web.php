@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\InviteActivationController;
+use App\Http\Controllers\PlayerProgramPdfController;
 use App\Livewire\Coach\Advice\Index as CoachAdviceIndex;
 use App\Livewire\Coach\AnalysisExport;
 use App\Livewire\Coach\Checkins\Index as CoachCheckinsIndex;
@@ -41,6 +42,7 @@ Route::middleware(['auth', 'role:coach'])->prefix('coach')->name('coach.')->grou
     Route::get('players', CoachPlayersIndex::class)->name('players.index');
     Route::get('players/create', CoachPlayersCreate::class)->name('players.create');
     Route::get('players/{player}', CoachPlayersShow::class)->name('players.show');
+    Route::get('players/{player}/program-pdf', [PlayerProgramPdfController::class, 'coach'])->name('players.program-pdf');
     Route::get('players/{player}/edit', CoachPlayersEdit::class)->name('players.edit');
     Route::get('players/{player}/checkin-preview', CoachPlayersCheckinPreview::class)->name('players.checkin-preview');
     Route::get('checkins', CoachCheckinsIndex::class)->name('checkins.index');
@@ -100,6 +102,7 @@ Route::middleware(['auth', 'role:coach'])->prefix('coach')->name('coach.')->grou
 Route::middleware(['auth', 'role:player'])->prefix('player')->name('player.')->group(function () {
     Route::get('home', PlayerHome::class)->name('home');
     Route::get('program', PlayerProgram::class)->name('program');
+    Route::get('program/pdf', [PlayerProgramPdfController::class, 'player'])->name('program.pdf');
     Route::get('checkin', PlayerCheckin::class)->name('checkin');
     Route::get('progress', PlayerProgress::class)->name('progress');
     Route::get('advice', PlayerAdvice::class)->name('advice');

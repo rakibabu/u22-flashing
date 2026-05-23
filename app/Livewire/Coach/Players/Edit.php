@@ -4,16 +4,22 @@ namespace App\Livewire\Coach\Players;
 
 use App\Models\Player;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class Edit extends Component
 {
     use AuthorizesRequests;
+    use WithFileUploads;
 
     public Player $player;
 
     public array $form = [];
+
+    public $training_program_pdf = null;
 
     public function mount(Player $player): void
     {
@@ -33,9 +39,20 @@ class Edit extends Component
             'form.target_weight_kg' => ['nullable', 'numeric', 'between:40,160'],
             'form.long_term_target_weight_kg' => ['nullable', 'numeric', 'between:40,160'],
             'form.notes' => ['nullable', 'string', 'max:5000'],
+            'training_program_pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
         ]);
 
         $this->player->update($validated['form']);
+
+        if ($this->training_program_pdf) {
+            if ($this->player->training_program_pdf_path) {
+                Storage::disk('local')->delete($this->player->training_program_pdf_path);
+            }
+
+            $this->player->update([
+                'training_program_pdf_path' => $this->storeTrainingProgramPdf(),
+            ]);
+        }
 
         return redirect()->route('coach.players.show', $this->player);
     }
@@ -43,5 +60,12 @@ class Edit extends Component
     public function render()
     {
         return view('livewire.coach.players.edit')->layout('layouts.app');
+    }
+
+    private function storeTrainingProgramPdf(): string
+    {
+        $filename = Str::slug($this->player->name).'-programma-'.now()->format('YmdHis').'.pdf';
+
+        return $this->training_program_pdf->storeAs("player-programs/{$this->player->id}", $filename, 'local');
     }
 }

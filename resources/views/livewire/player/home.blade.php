@@ -9,6 +9,7 @@
         <a href="{{ route('player.checkin') }}" wire:navigate class="rounded-lg border border-orange-200 bg-orange-50 p-5 text-orange-950 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-100">
             <p class="text-sm opacity-80">Weekcheck</p>
             <h2 class="mt-1 text-xl font-semibold">{{ $hasCheckinThisWeek ? 'Ingevuld' : 'Nog invullen' }}</h2>
+            <p class="mt-2 text-sm opacity-80">Elke zondag opnieuw via deze knop.</p>
         </a>
     </div>
 

@@ -315,13 +315,6 @@
             <div class="h-full rounded-full bg-flash-orange transition-all duration-300" style="width: {{ round(($step / $maxStep) * 100) }}%"></div>
         </div>
 
-        @unless ($preview)
-            <div class="rounded-xl border border-primary-100 bg-white px-3 py-2 text-xs font-semibold text-primary-800">
-                {{ $autosavedAt ? "Concept automatisch opgeslagen om {$autosavedAt}" : 'Concept wordt automatisch opgeslagen' }}
-                <span class="block font-normal text-zinc-500">Definitief versturen doe je op de laatste stap.</span>
-            </div>
-        @endunless
-
         @if ($stepError)
             <div class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-950">
                 {{ $stepError }}
