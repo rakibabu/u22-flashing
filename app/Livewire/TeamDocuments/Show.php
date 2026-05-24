@@ -77,7 +77,7 @@ class Show extends Component
             'document' => $document,
             'hasPdf' => $hasPdf,
             'isCoach' => auth()->user()?->isCoach() === true,
-            'pdfUrl' => $hasPdf ? route($routePrefix.'.documents.pdf', $document) : null,
+            'pdfUrl' => $hasPdf ? route($routePrefix.'.documents.pdf', $document, absolute: false) : null,
         ])->layout('layouts.app');
     }
 }

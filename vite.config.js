@@ -16,6 +16,14 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
+    worker: {
+        rollupOptions: {
+            output: {
+                entryFileNames: 'assets/[name]-[hash].js',
+                chunkFileNames: 'assets/[name]-[hash].js',
+            },
+        },
+    },
     server: {
         cors: true,
         watch: {

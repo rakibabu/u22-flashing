@@ -97,7 +97,7 @@ test('speler ziet team document met inhoudsopgave zonder uploadformulier', funct
         ->assertSee('Team afspraken')
         ->assertSee('Teamregels')
         ->assertSee('Communicatie')
-        ->assertSee(route('player.documents.pdf', $document), false)
+        ->assertSee(route('player.documents.pdf', $document, absolute: false), false)
         ->assertDontSee('PDF uploaden');
 });
 

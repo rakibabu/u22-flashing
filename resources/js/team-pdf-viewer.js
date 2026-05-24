@@ -1,5 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker&url';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -64,11 +64,12 @@ class TeamPdfViewer extends HTMLElement {
         this.status.textContent = 'PDF laden...';
 
         try {
-            this.pdf = await pdfjsLib.getDocument({ url: src }).promise;
+            this.pdf = await pdfjsLib.getDocument({ url: src, withCredentials: true }).promise;
             this.currentPage = this.clampedPage(Number(this.getAttribute('page') || 1));
             await this.renderPage();
-        } catch {
-            this.status.textContent = 'PDF kon niet geladen worden.';
+        } catch (error) {
+            console.error('Team PDF kon niet geladen worden.', { src, error });
+            this.status.textContent = this.errorMessage(error);
         }
     }
 
@@ -102,6 +103,20 @@ class TeamPdfViewer extends HTMLElement {
 
     clampedPage(page) {
         return Math.min(Math.max(Number.isFinite(page) ? page : 1, 1), this.pdf?.numPages || 1);
+    }
+
+    errorMessage(error) {
+        const message = error?.message || '';
+
+        if (message.includes('Unexpected server response')) {
+            return 'PDF kon niet geladen worden. De PDF-route geeft geen geldig PDF-bestand terug.';
+        }
+
+        if (message.includes('Missing PDF') || message.includes('Invalid PDF')) {
+            return 'PDF kon niet gelezen worden. Upload het bestand opnieuw als PDF.';
+        }
+
+        return 'PDF kon niet geladen worden. Open de browserconsole voor de technische melding.';
     }
 }
 
