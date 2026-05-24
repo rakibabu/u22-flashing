@@ -111,7 +111,35 @@
     <section class="space-y-3">
         <h2 class="font-semibold">Coachnotities</h2>
         @foreach ($player->coachNotes as $note)
-            <x-advice-card :note="$note" wire:key="note-{{ $note->id }}" />
+            <div wire:key="note-{{ $note->id }}">
+                @if ($editingNoteId === $note->id)
+                    <article class="rounded-lg border border-primary-800/10 bg-white p-4 shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
+                        <form wire:submit="updateAdvice" class="space-y-3">
+                            <flux:input wire:model="editingNoteTitle" label="Titel" />
+                            <flux:error name="editingNoteTitle" />
+
+                            <flux:textarea wire:model="editingNoteBody" label="Advies" rows="5" />
+                            <flux:error name="editingNoteBody" />
+
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" wire:model="editingNoteVisibleToPlayer" class="rounded border-zinc-300">
+                                Zichtbaar voor speler
+                            </label>
+
+                            <div class="flex flex-wrap gap-2">
+                                <flux:button type="submit" size="sm" variant="primary" icon="check">Opslaan</flux:button>
+                                <flux:button type="button" size="sm" wire:click="cancelAdviceEdit">Annuleer</flux:button>
+                            </div>
+                        </form>
+                    </article>
+                @else
+                    <x-advice-card :note="$note" />
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <flux:button size="sm" icon="pencil-square" wire:click="editAdvice({{ $note->id }})">Bewerk</flux:button>
+                        <flux:button size="sm" variant="danger" icon="trash" wire:click="deleteAdvice({{ $note->id }})" wire:confirm="Weet je zeker dat je dit advies wilt verwijderen?">Verwijder</flux:button>
+                    </div>
+                @endif
+            </div>
         @endforeach
     </section>
 

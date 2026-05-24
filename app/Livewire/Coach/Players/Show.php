@@ -23,6 +23,14 @@ class Show extends Component
 
     public ?string $inviteLink = null;
 
+    public ?int $editingNoteId = null;
+
+    public string $editingNoteTitle = '';
+
+    public string $editingNoteBody = '';
+
+    public bool $editingNoteVisibleToPlayer = false;
+
     public function mount(Player $player, PlayerAdviceService $adviceService): void
     {
         $this->authorize('view', $player);
@@ -59,6 +67,61 @@ class Show extends Component
         $this->dispatch('advice-saved');
     }
 
+    public function editAdvice(int $noteId): void
+    {
+        $this->authorize('update', $this->player);
+
+        $coachNote = $this->player->coachNotes()->findOrFail($noteId);
+
+        $this->editingNoteId = $coachNote->id;
+        $this->editingNoteTitle = $coachNote->title;
+        $this->editingNoteBody = $coachNote->body;
+        $this->editingNoteVisibleToPlayer = $coachNote->visible_to_player;
+    }
+
+    public function updateAdvice(CoachAdviceMailService $coachAdviceMailService): void
+    {
+        $this->authorize('update', $this->player);
+
+        $this->validate([
+            'editingNoteId' => ['required', 'integer', 'exists:coach_notes,id'],
+            'editingNoteTitle' => ['required', 'string', 'max:255'],
+            'editingNoteBody' => ['required', 'string', 'max:5000'],
+            'editingNoteVisibleToPlayer' => ['boolean'],
+        ]);
+
+        $coachNote = $this->player->coachNotes()->findOrFail($this->editingNoteId);
+
+        $coachNote->update([
+            'title' => $this->editingNoteTitle,
+            'body' => $this->editingNoteBody,
+            'visible_to_player' => $this->editingNoteVisibleToPlayer,
+        ]);
+
+        $coachAdviceMailService->sendWhenVisible($coachNote);
+
+        $this->resetAdviceEditForm();
+        $this->dispatch('advice-updated');
+    }
+
+    public function cancelAdviceEdit(): void
+    {
+        $this->resetAdviceEditForm();
+    }
+
+    public function deleteAdvice(int $noteId): void
+    {
+        $this->authorize('update', $this->player);
+
+        $this->player->coachNotes()->findOrFail($noteId)->delete();
+
+        if ($this->editingNoteId === $noteId) {
+            $this->resetAdviceEditForm();
+        }
+
+        $this->dispatch('advice-deleted');
+    }
+
     public function render(PlayerAdviceService $adviceService, WhatsAppMessageService $whatsAppMessageService)
     {
         $this->player->load([
@@ -76,5 +139,14 @@ class Show extends Component
             'timeline' => $adviceService->timelineFor($this->player),
             'whatsAppMessage' => $whatsAppMessageService->forPlayer($this->player, $evaluation),
         ])->layout('layouts.app');
+    }
+
+    private function resetAdviceEditForm(): void
+    {
+        $this->editingNoteId = null;
+        $this->editingNoteTitle = '';
+        $this->editingNoteBody = '';
+        $this->editingNoteVisibleToPlayer = false;
+        $this->resetValidation();
     }
 }
