@@ -57,29 +57,39 @@
     @if ($hasPdf)
         <section
             x-data="{ page: {{ $document->sections->first()?->page_number ?? 1 }} }"
-            class="grid gap-4 xl:grid-cols-[18rem_minmax(0,1fr)]"
+            class="grid min-w-0 gap-4 xl:grid-cols-[18rem_minmax(0,1fr)]"
         >
-            <aside class="rounded-lg border border-primary-800/10 bg-white p-3 shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
-                <div class="flex items-center justify-between gap-3 border-b border-primary-800/10 pb-3 dark:border-flash-orange/20">
-                    <div>
+            <aside class="min-w-0 rounded-lg border border-primary-800/10 bg-white p-3 shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
+                <div class="flex flex-wrap items-start justify-between gap-3 border-b border-primary-800/10 pb-3 dark:border-flash-orange/20">
+                    <div class="min-w-0">
                         <p class="text-xs font-semibold uppercase text-flash-orange">Inhoud</p>
                         <h2 class="font-semibold text-primary-900 dark:text-white">Ga direct naar</h2>
                     </div>
-                    <span class="rounded-md bg-primary-50 px-2 py-1 text-xs font-medium text-primary-900 dark:bg-primary-900 dark:text-white">
-                        {{ $document->sections->count() }}
-                    </span>
+                    <div class="flex shrink-0 items-center gap-2">
+                        <span class="rounded-md bg-primary-50 px-2 py-1 text-xs font-medium text-primary-900 dark:bg-primary-900 dark:text-white">
+                            {{ $document->sections->count() }}
+                        </span>
+                        <a
+                            href="{{ $pdfUrl }}"
+                            target="_blank"
+                            rel="noopener"
+                            class="rounded-md border border-primary-800/10 px-2 py-1 text-xs font-semibold text-primary-900 transition hover:bg-primary-50 dark:border-flash-orange/20 dark:text-white dark:hover:bg-primary-900"
+                        >
+                            Open PDF
+                        </a>
+                    </div>
                 </div>
 
                 <div class="mt-3 max-h-[70vh] space-y-1 overflow-y-auto pr-1">
                     @foreach ($document->sections as $section)
                         <button
                             type="button"
-                            class="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm transition hover:bg-primary-50 dark:hover:bg-primary-900"
+                            class="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-md px-3 py-2 text-left text-sm transition hover:bg-primary-50 dark:hover:bg-primary-900"
                             x-bind:class="page === {{ $section->page_number }} ? 'bg-primary-800 text-white hover:bg-primary-800 dark:bg-flash-orange dark:text-primary-950 dark:hover:bg-flash-orange' : 'text-primary-900 dark:text-zinc-200'"
                             x-on:click="page = {{ $section->page_number }}"
                             wire:key="document-section-{{ $section->id }}"
                         >
-                            <span class="min-w-0 truncate">{{ $section->title }}</span>
+                            <span class="u22-document-section-title" title="{{ $section->title }}">{{ $section->title }}</span>
                             <span class="shrink-0 text-xs opacity-75">p. {{ $section->page_number }}</span>
                         </button>
                     @endforeach
@@ -90,6 +100,7 @@
                 src="{{ $pdfUrl }}"
                 page="{{ $document->sections->first()?->page_number ?? 1 }}"
                 x-bind:page="page"
+                x-on:team-pdf-page-changed="page = $event.detail.page"
             ></team-pdf-viewer>
         </section>
     @else

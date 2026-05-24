@@ -41,6 +41,28 @@ test('zichtbaar advies mailt de speler', function () {
     });
 });
 
+test('adviesmail gebruikt de Flashing mailtemplate', function () {
+    $coach = User::factory()->coach()->create(['name' => 'Coach Rak']);
+    $player = coachAdviceMailPlayer();
+    $coachNote = CoachNote::query()->create([
+        'player_id' => $player->id,
+        'coach_user_id' => $coach->id,
+        'week_start_date' => now()->startOfWeek()->toDateString(),
+        'type' => 'advice',
+        'title' => 'Coachadvies',
+        'body' => 'Pak deze week twee rustige krachtmomenten.',
+        'visible_to_player' => true,
+        'sent_at' => now(),
+    ]);
+
+    $mailable = new CoachAdviceWritten($coachNote);
+
+    $mailable->assertSeeInHtml('logo-email-white.png');
+    $mailable->assertSeeInHtml('Nieuw coachadvies');
+    $mailable->assertSeeInHtml('Pak deze week twee rustige krachtmomenten.');
+    $mailable->assertSeeInHtml('Bekijk advies');
+});
+
 test('verborgen advies mailt de speler niet', function () {
     Mail::fake();
 

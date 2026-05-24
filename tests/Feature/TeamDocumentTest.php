@@ -88,6 +88,7 @@ test('speler ziet team document met inhoudsopgave zonder uploadformulier', funct
     $document->sections()->createMany([
         ['title' => 'Teamregels', 'page_number' => 1, 'sort_order' => 1, 'source' => 'text'],
         ['title' => 'Communicatie', 'page_number' => 3, 'sort_order' => 2, 'source' => 'text'],
+        ['title' => 'baseline, omdat daar onze trap en rotatie duidelijk georganiseerd zijn.', 'page_number' => 8, 'sort_order' => 3, 'source' => 'text'],
     ]);
     Storage::disk('local')->put($document->pdf_path, '%PDF-1.4 test');
 
@@ -97,6 +98,9 @@ test('speler ziet team document met inhoudsopgave zonder uploadformulier', funct
         ->assertSee('Team afspraken')
         ->assertSee('Teamregels')
         ->assertSee('Communicatie')
+        ->assertSee('baseline, omdat daar onze trap en rotatie duidelijk georganiseerd zijn.')
+        ->assertSee('u22-document-section-title', false)
+        ->assertSee('Open PDF')
         ->assertSee(route('player.documents.pdf', $document, absolute: false), false)
         ->assertDontSee('PDF uploaden');
 });
