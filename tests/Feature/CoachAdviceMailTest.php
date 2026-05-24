@@ -61,6 +61,14 @@ test('adviesmail gebruikt de Flashing mailtemplate', function () {
     $mailable->assertSeeInHtml('Nieuw coachadvies');
     $mailable->assertSeeInHtml('Pak deze week twee rustige krachtmomenten.');
     $mailable->assertSeeInHtml('Bekijk advies');
+
+    $html = $mailable->render();
+
+    expect($html)
+        ->toContain('background-color: #df6e28')
+        ->toContain('padding: 10px 18px')
+        ->toContain('border: 1px solid #df6e28')
+        ->not->toContain('border-left: 18px solid #df6e28');
 });
 
 test('verborgen advies mailt de speler niet', function () {
