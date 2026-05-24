@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\InviteActivationController;
 use App\Http\Controllers\PlayerProgramPdfController;
+use App\Http\Controllers\TeamDocumentPdfController;
 use App\Livewire\Coach\Advice\Index as CoachAdviceIndex;
 use App\Livewire\Coach\AnalysisExport;
 use App\Livewire\Coach\Checkins\Index as CoachCheckinsIndex;
@@ -19,6 +20,7 @@ use App\Livewire\Player\Home as PlayerHome;
 use App\Livewire\Player\Program as PlayerProgram;
 use App\Livewire\Player\Progress as PlayerProgress;
 use App\Livewire\Public\TeamActivation;
+use App\Livewire\TeamDocuments\Show as TeamDocumentShow;
 use App\Models\Player;
 use App\Services\PlayerAdviceService;
 use Illuminate\Support\Facades\Route;
@@ -50,6 +52,8 @@ Route::middleware(['auth', 'role:coach'])->prefix('coach')->name('coach.')->grou
     Route::get('checkins/{weeklyCheckin}', CoachCheckinsShow::class)->name('checkins.show');
     Route::get('tests', CoachTestsIndex::class)->name('tests.index');
     Route::get('advice', CoachAdviceIndex::class)->name('advice.index');
+    Route::get('documents/{type}', TeamDocumentShow::class)->name('documents.show');
+    Route::get('documents/{teamDocument}/pdf', TeamDocumentPdfController::class)->name('documents.pdf');
     Route::get('analysis-export', AnalysisExport::class)->name('analysis-export');
     Route::get('analysis-export.csv', function (PlayerAdviceService $adviceService) {
         $players = Player::query()->with(['settings', 'latestCheckin', 'checkins' => fn ($query) => $query->latest('week_start_date')->limit(3)])->where('active', true)->orderBy('name')->get();
@@ -107,6 +111,8 @@ Route::middleware(['auth', 'role:player'])->prefix('player')->name('player.')->g
     Route::get('checkin', PlayerCheckin::class)->name('checkin');
     Route::get('progress', PlayerProgress::class)->name('progress');
     Route::get('advice', PlayerAdvice::class)->name('advice');
+    Route::get('documents/{type}', TeamDocumentShow::class)->name('documents.show');
+    Route::get('documents/{teamDocument}/pdf', TeamDocumentPdfController::class)->name('documents.pdf');
 });
 
 require __DIR__.'/settings.php';

@@ -7,6 +7,7 @@ use App\Models\ExerciseLibraryItem;
 use App\Models\Invite;
 use App\Models\Player;
 use App\Models\ProgramTemplate;
+use App\Models\TeamDocument;
 use App\Models\User;
 use App\Models\WeeklyCheckin;
 use Illuminate\Database\Seeder;
@@ -18,6 +19,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(CoachUserSeeder::class);
 
+        TeamDocument::ensureDefaults();
         $templates = $this->seedProgramTemplates();
         $this->seedExerciseLibrary();
         $players = $this->seedPlayers();

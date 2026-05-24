@@ -20,12 +20,18 @@
                         <flux:sidebar.item icon="clipboard-document-check" :href="route('coach.checkins.index')" :current="request()->routeIs('coach.checkins.*')" wire:navigate>Check-ins</flux:sidebar.item>
                         <flux:sidebar.item icon="chart-bar" :href="route('coach.tests.index')" :current="request()->routeIs('coach.tests.*')" wire:navigate>Tests</flux:sidebar.item>
                         <flux:sidebar.item icon="chat-bubble-left-right" :href="route('coach.advice.index')" :current="request()->routeIs('coach.advice.*')" wire:navigate>Advies</flux:sidebar.item>
+                        <flux:sidebar.item icon="clipboard-document-check" :href="route('coach.documents.show', \App\Models\TeamDocument::Plays)" :current="request()->routeIs('coach.documents.*') && request()->route('type') === \App\Models\TeamDocument::Plays" wire:navigate>Plays</flux:sidebar.item>
+                        <flux:sidebar.item icon="book-open" :href="route('coach.documents.show', \App\Models\TeamDocument::Playbook)" :current="request()->routeIs('coach.documents.*') && request()->route('type') === \App\Models\TeamDocument::Playbook" wire:navigate>Playbook</flux:sidebar.item>
+                        <flux:sidebar.item icon="document-text" :href="route('coach.documents.show', \App\Models\TeamDocument::TeamAgreements)" :current="request()->routeIs('coach.documents.*') && request()->route('type') === \App\Models\TeamDocument::TeamAgreements" wire:navigate>Team afspraken</flux:sidebar.item>
                         <flux:sidebar.item icon="document-text" :href="route('coach.analysis-export')" :current="request()->routeIs('coach.analysis-export')" wire:navigate>Analyse export</flux:sidebar.item>
                     @else
                         <flux:sidebar.item icon="book-open" :href="route('player.program')" :current="request()->routeIs('player.program')" wire:navigate>Programma</flux:sidebar.item>
                         <flux:sidebar.item icon="clipboard-document-check" :href="route('player.checkin')" :current="request()->routeIs('player.checkin')" wire:navigate>Weekcheck</flux:sidebar.item>
                         <flux:sidebar.item icon="chart-bar" :href="route('player.progress')" :current="request()->routeIs('player.progress')" wire:navigate>Voortgang</flux:sidebar.item>
                         <flux:sidebar.item icon="chat-bubble-left-right" :href="route('player.advice')" :current="request()->routeIs('player.advice')" wire:navigate>Advies</flux:sidebar.item>
+                        <flux:sidebar.item icon="clipboard-document-check" :href="route('player.documents.show', \App\Models\TeamDocument::Plays)" :current="request()->routeIs('player.documents.*') && request()->route('type') === \App\Models\TeamDocument::Plays" wire:navigate>Plays</flux:sidebar.item>
+                        <flux:sidebar.item icon="book-open" :href="route('player.documents.show', \App\Models\TeamDocument::Playbook)" :current="request()->routeIs('player.documents.*') && request()->route('type') === \App\Models\TeamDocument::Playbook" wire:navigate>Playbook</flux:sidebar.item>
+                        <flux:sidebar.item icon="document-text" :href="route('player.documents.show', \App\Models\TeamDocument::TeamAgreements)" :current="request()->routeIs('player.documents.*') && request()->route('type') === \App\Models\TeamDocument::TeamAgreements" wire:navigate>Team afspraken</flux:sidebar.item>
                     @endif
                 </flux:sidebar.group>
             </flux:sidebar.nav>
