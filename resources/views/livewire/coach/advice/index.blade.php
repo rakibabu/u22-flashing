@@ -8,8 +8,9 @@
                         <h2 class="font-semibold">{{ $note->player->name }} - {{ $note->title }}</h2>
                         <p class="mt-2 whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">{{ $note->body }}</p>
                     </div>
-                    <div class="flex shrink-0 gap-2">
+                    <div class="flex shrink-0 flex-wrap gap-2">
                         <flux:button size="sm" wire:click="toggleVisible({{ $note->id }})">{{ $note->visible_to_player ? 'Verberg' : 'Zichtbaar' }}</flux:button>
+                        <flux:button size="sm" variant="danger" icon="trash" wire:click="delete({{ $note->id }})" wire:confirm="Weet je zeker dat je dit advies wilt verwijderen?">Verwijder</flux:button>
                         <input readonly value="{{ $note->body }}" class="w-48 rounded-md border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-800 dark:bg-zinc-950">
                     </div>
                 </div>

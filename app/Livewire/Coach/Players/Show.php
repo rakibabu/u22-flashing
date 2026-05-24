@@ -5,6 +5,7 @@ namespace App\Livewire\Coach\Players;
 use App\Models\CoachNote;
 use App\Models\Invite;
 use App\Models\Player;
+use App\Services\CoachAdviceMailService;
 use App\Services\PlayerAdviceService;
 use App\Services\WhatsAppMessageService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -37,13 +38,13 @@ class Show extends Component
         $this->player->refresh();
     }
 
-    public function saveAdvice(): void
+    public function saveAdvice(CoachAdviceMailService $coachAdviceMailService): void
     {
         $this->authorize('update', $this->player);
 
         $this->validate(['adviceBody' => ['required', 'string', 'max:5000']]);
 
-        CoachNote::query()->create([
+        $coachNote = CoachNote::query()->create([
             'player_id' => $this->player->id,
             'coach_user_id' => auth()->id(),
             'week_start_date' => now()->startOfWeek()->toDateString(),
@@ -51,8 +52,9 @@ class Show extends Component
             'title' => 'Coachadvies',
             'body' => $this->adviceBody,
             'visible_to_player' => $this->visibleToPlayer,
-            'sent_at' => $this->visibleToPlayer ? now() : null,
         ]);
+
+        $coachAdviceMailService->sendWhenVisible($coachNote);
 
         $this->dispatch('advice-saved');
     }
