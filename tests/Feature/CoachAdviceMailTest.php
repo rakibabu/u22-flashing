@@ -35,7 +35,7 @@ test('zichtbaar advies mailt de speler', function () {
 
     expect($coachNote->sent_at)->not->toBeNull();
 
-    Mail::assertQueued(CoachAdviceWritten::class, function (CoachAdviceWritten $mail) use ($coachNote, $player): bool {
+    Mail::assertSent(CoachAdviceWritten::class, function (CoachAdviceWritten $mail) use ($coachNote, $player): bool {
         return $mail->hasTo($player->user->email)
             && $mail->coachNote->is($coachNote);
     });
@@ -79,7 +79,7 @@ test('verborgen advies mailt de speler niet', function () {
 
     expect($coachNote->sent_at)->toBeNull();
 
-    Mail::assertNothingQueued();
+    Mail::assertNothingSent();
 });
 
 test('zichtbaar maken vanuit de advieslijst mailt eenmalig', function () {
@@ -104,7 +104,7 @@ test('zichtbaar maken vanuit de advieslijst mailt eenmalig', function () {
     expect($coachNote->refresh()->visible_to_player)->toBeTrue()
         ->and($coachNote->sent_at)->not->toBeNull();
 
-    Mail::assertQueuedCount(1);
+    Mail::assertSentCount(1);
 
     Livewire::actingAs($coach)
         ->test(CoachAdviceIndex::class)
@@ -114,7 +114,7 @@ test('zichtbaar maken vanuit de advieslijst mailt eenmalig', function () {
     expect($coachNote->refresh()->visible_to_player)->toBeTrue()
         ->and($coachNote->sent_at)->not->toBeNull();
 
-    Mail::assertQueuedCount(1);
+    Mail::assertSentCount(1);
 });
 
 test('speler zonder e-mailadres krijgt geen adviesmail', function () {
@@ -133,5 +133,5 @@ test('speler zonder e-mailadres krijgt geen adviesmail', function () {
 
     expect($coachNote->sent_at)->toBeNull();
 
-    Mail::assertNothingQueued();
+    Mail::assertNothingSent();
 });

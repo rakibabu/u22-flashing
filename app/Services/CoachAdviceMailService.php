@@ -22,7 +22,7 @@ class CoachAdviceMailService
             return;
         }
 
-        Mail::to($email)->queue(new CoachAdviceWritten($coachNote));
+        Mail::to($email)->send(new CoachAdviceWritten($coachNote));
 
         $coachNote->forceFill(['sent_at' => now()])->save();
     }

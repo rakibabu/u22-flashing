@@ -52,7 +52,7 @@ class TeamPdfViewer extends HTMLElement {
         const buttonClass = 'rounded-md border border-primary-800/10 px-3 py-1.5 text-sm font-medium text-primary-900 transition hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-flash-orange/20 dark:text-white dark:hover:bg-primary-900';
 
         this.innerHTML = `
-            <div class="min-w-0 overflow-hidden rounded-lg border border-primary-800/10 bg-white shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
+            <div class="w-full min-w-0 overflow-hidden rounded-lg border border-primary-800/10 bg-white shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
                 <div class="grid gap-2 border-b border-primary-800/10 px-3 py-2 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center dark:border-flash-orange/20">
                     <div class="flex items-center gap-2">
                         <button type="button" data-previous class="${buttonClass}">Vorige</button>
@@ -66,7 +66,7 @@ class TeamPdfViewer extends HTMLElement {
                         <p data-status class="min-w-0 flex-1 text-sm text-zinc-600 lg:flex-none lg:text-right dark:text-zinc-300">PDF laden...</p>
                     </div>
                 </div>
-                <div data-stage class="min-h-[65vh] max-h-[75vh] overflow-auto bg-zinc-100 p-2 sm:min-h-[70vh] sm:p-3 dark:bg-primary-950">
+                <div data-stage class="min-h-[65vh] max-h-[75vh] w-full overflow-auto bg-zinc-100 p-2 sm:min-h-[70vh] sm:p-3 dark:bg-primary-950">
                     <canvas data-canvas class="mx-auto block bg-white shadow-sm"></canvas>
                 </div>
             </div>

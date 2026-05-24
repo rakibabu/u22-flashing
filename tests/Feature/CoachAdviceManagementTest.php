@@ -80,7 +80,7 @@ test('coach kan advies bewerken', function () {
         ->and($coachNote->visible_to_player)->toBeTrue()
         ->and($coachNote->sent_at)->not->toBeNull();
 
-    Mail::assertQueued(CoachAdviceWritten::class);
+    Mail::assertSent(CoachAdviceWritten::class);
 });
 
 test('speler kan advies niet verwijderen', function () {
@@ -163,7 +163,7 @@ test('coach kan advies bij speler bewerken', function () {
         ->and($coachNote->visible_to_player)->toBeTrue()
         ->and($coachNote->sent_at)->not->toBeNull();
 
-    Mail::assertQueued(CoachAdviceWritten::class);
+    Mail::assertSent(CoachAdviceWritten::class);
 });
 
 test('coach kan advies bij speler verwijderen', function () {

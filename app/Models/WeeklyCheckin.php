@@ -44,6 +44,7 @@ class WeeklyCheckin extends Model
         'used_yazio',
         'notes',
         'submitted_at',
+        'coach_notified_at',
     ];
 
     protected function casts(): array
@@ -67,6 +68,7 @@ class WeeklyCheckin extends Model
             'used_mijn_eetmeter' => 'boolean',
             'used_yazio' => 'boolean',
             'submitted_at' => 'datetime',
+            'coach_notified_at' => 'datetime',
         ];
     }
 

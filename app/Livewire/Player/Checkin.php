@@ -4,6 +4,7 @@ namespace App\Livewire\Player;
 
 use App\Models\Player;
 use App\Models\WeeklyCheckin;
+use App\Services\CheckinCoachMailService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
@@ -123,7 +124,7 @@ class Checkin extends Component
         $this->autosaveField($key);
     }
 
-    public function save(): void
+    public function save(CheckinCoachMailService $checkinCoachMailService): void
     {
         $player = $this->currentPlayer();
         abort_unless($player, 403);
@@ -164,12 +165,14 @@ class Checkin extends Component
             $checkin->update($validated + ['submitted_at' => now()]);
         } else {
             $this->authorize('create', WeeklyCheckin::class);
-            WeeklyCheckin::query()->create($validated + [
+            $checkin = WeeklyCheckin::query()->create($validated + [
                 'player_id' => $player->id,
                 'week_start_date' => now()->startOfWeek(),
                 'submitted_at' => now(),
             ]);
         }
+
+        $checkinCoachMailService->sendOnce($checkin->refresh());
 
         $this->saved = true;
     }

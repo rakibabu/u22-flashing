@@ -4,23 +4,19 @@ namespace App\Mail;
 
 use App\Models\CoachNote;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class CoachAdviceWritten extends Mailable implements ShouldQueue
+class CoachAdviceWritten extends Mailable
 {
     use Queueable, SerializesModels;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(public CoachNote $coachNote)
-    {
-        $this->afterCommit();
-    }
+    public function __construct(public CoachNote $coachNote) {}
 
     /**
      * Get the message envelope.
