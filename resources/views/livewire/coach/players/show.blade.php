@@ -94,8 +94,31 @@
         </section>
 
         <section class="rounded-lg border border-primary-800/10 bg-white p-4 shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
-            <h2 class="font-display text-2xl font-normal leading-none text-primary-900 dark:text-white">Advies maken</h2>
-            <div class="mt-2 h-1 w-10 bg-flash-orange"></div>
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h2 class="font-display text-2xl font-normal leading-none text-primary-900 dark:text-white">Advies maken</h2>
+                    <div class="mt-2 h-1 w-10 bg-flash-orange"></div>
+                    <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+                        Week {{ $selectedAdviceWeekNumber }} - {{ $selectedAdviceWeekRange }}
+                    </p>
+                    @if ($selectedAdviceCheckin)
+                        <p class="mt-1 text-xs text-emerald-700 dark:text-emerald-300">Gebaseerd op de ingediende weekcheck van deze week.</p>
+                    @else
+                        <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Geen ingediende weekcheck voor deze adviesweek.</p>
+                    @endif
+                </div>
+                <div class="flex flex-col gap-2 sm:min-w-56">
+                    <div class="flex flex-wrap gap-2 sm:justify-end">
+                        <flux:button size="sm" icon="chevron-left" wire:click="previousAdviceWeek">Vorige</flux:button>
+                        <flux:button size="sm" icon="calendar-days" wire:click="currentAdviceWeek">Deze week</flux:button>
+                        <flux:button size="sm" icon="chevron-right" wire:click="nextAdviceWeek" :disabled="$isCurrentAdviceWeek">Volgende</flux:button>
+                    </div>
+                    <flux:field>
+                        <flux:label>Adviesweek</flux:label>
+                        <flux:input type="week" wire:model.live="adviceWeek" max="{{ $currentAdviceWeekValue }}" />
+                    </flux:field>
+                </div>
+            </div>
             <flux:textarea wire:model="adviceBody" rows="7" class="mt-3" />
             <label class="mt-3 flex items-center gap-2 text-sm">
                 <input type="checkbox" wire:model="visibleToPlayer" class="rounded border-zinc-300">

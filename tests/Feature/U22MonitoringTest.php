@@ -311,6 +311,8 @@ test('coach kan speler weekcheck scherm previewen zonder speleraccount te maken'
         ->set('form.strength_sessions', 3)
         ->set('form.conditioning_sessions', 1)
         ->set('form.mobility_sessions', 3)
+        ->set('form.total_training_minutes', 90)
+        ->set('form.highest_session_rpe', 6)
         ->call('nextStep')
         ->assertSet('step', 2)
         ->assertSee('Aantal uur slaap')
@@ -381,6 +383,8 @@ test('onderhoudsspeler ziet geen gewicht in checkin preview', function () {
         ->set('form.strength_sessions', 2)
         ->set('form.conditioning_sessions', 2)
         ->set('form.mobility_sessions', 3)
+        ->set('form.total_training_minutes', 120)
+        ->set('form.highest_session_rpe', 6)
         ->call('nextStep')
         ->set('form.sleep_avg_hours', 7.5)
         ->set('form.energy_score', 7)
@@ -493,6 +497,8 @@ test('speler kan alleen de huidige weekcheck aanpassen', function () {
         ->set('form.conditioning_sessions', 2)
         ->set('form.mobility_sessions', 3)
         ->set('form.had_full_rest_day', true)
+        ->set('form.total_training_minutes', 120)
+        ->set('form.highest_session_rpe', 6)
         ->set('form.sleep_avg_hours', 7.5)
         ->set('form.energy_score', 8)
         ->set('form.soreness_score', 3)
@@ -522,6 +528,8 @@ test('speler kan vorige week tot en met woensdag invullen', function () {
         ->set('form.conditioning_sessions', 2)
         ->set('form.mobility_sessions', 3)
         ->set('form.had_full_rest_day', true)
+        ->set('form.total_training_minutes', 120)
+        ->set('form.highest_session_rpe', 6)
         ->set('form.sleep_avg_hours', 7.5)
         ->set('form.energy_score', 8)
         ->set('form.soreness_score', 3)
@@ -685,6 +693,8 @@ test('checkboxes zijn optioneel bij volgende stap checkin', function () {
         ->set('form.strength_sessions', 2)
         ->set('form.conditioning_sessions', 2)
         ->set('form.mobility_sessions', 3)
+        ->set('form.total_training_minutes', 120)
+        ->set('form.highest_session_rpe', 6)
         ->call('nextStep')
         ->assertSet('step', 2)
         ->assertHasNoErrors([
@@ -692,6 +702,32 @@ test('checkboxes zijn optioneel bij volgende stap checkin', function () {
             'form.pickup_thursday',
             'form.had_full_rest_day',
         ]);
+});
+
+test('speler moet trainingsminuten en hoogste rpe invullen bij conditie of pickup', function () {
+    $player = playerWithUser();
+
+    Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->set('form.strength_sessions', 2)
+        ->set('form.conditioning_sessions', 1)
+        ->set('form.mobility_sessions', 3)
+        ->assertSee('Zwaarste sessie')
+        ->call('nextStep')
+        ->assertSet('step', 1)
+        ->assertHasErrors([
+            'form.total_training_minutes' => 'required',
+            'form.highest_session_rpe' => 'required',
+        ])
+        ->assertSet('validationScrollField', 'total_training_minutes')
+        ->set('form.total_training_minutes', 90)
+        ->set('form.highest_session_rpe', 7)
+        ->call('nextStep')
+        ->assertHasNoErrors([
+            'form.total_training_minutes',
+            'form.highest_session_rpe',
+        ])
+        ->assertSet('step', 2);
 });
 
 test('herstel stap toont verplichte velden visueel als ze missen', function () {
@@ -702,6 +738,8 @@ test('herstel stap toont verplichte velden visueel als ze missen', function () {
         ->set('form.strength_sessions', 2)
         ->set('form.conditioning_sessions', 2)
         ->set('form.mobility_sessions', 3)
+        ->set('form.total_training_minutes', 120)
+        ->set('form.highest_session_rpe', 6)
         ->call('nextStep')
         ->assertSet('step', 2)
         ->call('nextStep')
@@ -724,6 +762,8 @@ test('pijnlocatie foutmelding gebruikt compacte checkin styling', function () {
         ->set('form.strength_sessions', 2)
         ->set('form.conditioning_sessions', 2)
         ->set('form.mobility_sessions', 3)
+        ->set('form.total_training_minutes', 120)
+        ->set('form.highest_session_rpe', 6)
         ->call('nextStep')
         ->set('form.sleep_avg_hours', 7.5)
         ->set('form.energy_score', 7)
@@ -745,6 +785,8 @@ test('stapnavigatie springt naar eerste incomplete stap', function () {
         ->set('form.strength_sessions', 2)
         ->set('form.conditioning_sessions', 2)
         ->set('form.mobility_sessions', 3)
+        ->set('form.total_training_minutes', 120)
+        ->set('form.highest_session_rpe', 6)
         ->call('goToStep', 3)
         ->assertSet('step', 2)
         ->assertHasErrors([
@@ -825,6 +867,8 @@ test('anders reden is verplicht en gewicht wordt alleen bij bulk opgeslagen', fu
         ->set('form.strength_sessions', 1)
         ->set('form.conditioning_sessions', 2)
         ->set('form.mobility_sessions', 3)
+        ->set('form.total_training_minutes', 120)
+        ->set('form.highest_session_rpe', 6)
         ->set('form.sleep_avg_hours', 7.5)
         ->set('form.energy_score', 7)
         ->set('form.soreness_score', 4)
@@ -860,6 +904,8 @@ test('bulk speler vult eiwitdetails in als eiwitdoel niet volledig is gehaald', 
         ->set('form.strength_sessions', 3)
         ->set('form.conditioning_sessions', 1)
         ->set('form.mobility_sessions', 3)
+        ->set('form.total_training_minutes', 90)
+        ->set('form.highest_session_rpe', 6)
         ->set('form.sleep_avg_hours', 7.5)
         ->set('form.energy_score', 7)
         ->set('form.soreness_score', 4)
@@ -905,6 +951,8 @@ test('bulk speler bewaart aantal eiwitdagen als doel is gehaald', function () {
         ->set('form.strength_sessions', 3)
         ->set('form.conditioning_sessions', 1)
         ->set('form.mobility_sessions', 3)
+        ->set('form.total_training_minutes', 90)
+        ->set('form.highest_session_rpe', 6)
         ->set('form.sleep_avg_hours', 7.5)
         ->set('form.energy_score', 7)
         ->set('form.soreness_score', 4)

@@ -179,7 +179,8 @@ class CheckinPreview extends Component
         $rules['form.energy_score'] = ['required', 'integer', 'between:1,10'];
         $rules['form.soreness_score'] = ['required', 'integer', 'between:1,10'];
         $rules['form.pain_location'] = [Rule::requiredIf((bool) ($this->form['pain'] ?? false)), 'nullable', 'string', 'max:255'];
-        $rules['form.highest_session_rpe'] = [Rule::requiredIf($this->player->isConditioning() && (int) ($this->form['conditioning_sessions'] ?? 0) > 0), 'nullable', 'integer', 'between:1,10'];
+        $rules['form.total_training_minutes'] = [Rule::requiredIf($this->hasConditioningLoad()), 'nullable', 'integer', 'between:0,2000'];
+        $rules['form.highest_session_rpe'] = [Rule::requiredIf($this->hasConditioningLoad()), 'nullable', 'integer', 'between:1,10'];
         $rules['form.missed_target_reason'] = [Rule::requiredIf($this->isUnderTarget()), 'nullable', Rule::in($this->missedTargetReasons())];
         $rules['form.missed_target_reason_other'] = [Rule::requiredIf($this->isUnderTarget() && ($this->form['missed_target_reason'] ?? null) === 'anders'), 'nullable', 'string', 'max:255'];
 
@@ -210,6 +211,10 @@ class CheckinPreview extends Component
                 'form.pickup_monday',
                 'form.pickup_thursday',
                 'form.had_full_rest_day',
+                ...($this->player->isConditioning() ? [] : [
+                    'form.total_training_minutes',
+                    'form.highest_session_rpe',
+                ]),
             ]);
         }
 
@@ -299,6 +304,7 @@ class CheckinPreview extends Component
             'form.sleep_avg_hours.required' => 'Vul je gemiddelde slaap per nacht in.',
             'form.energy_score.required' => 'Kies je energiescore.',
             'form.soreness_score.required' => 'Kies of je spierpijn licht of zwaar voelde.',
+            'form.total_training_minutes.required' => 'Vul je totale trainingsminuten in.',
             'form.missed_target_reason.required' => 'Kies waarom het niet gelukt is.',
             'form.missed_target_reason_other.required' => 'Vul kort in wat de andere reden is.',
             'form.pain_location.required' => 'Vul in waar de pijn zit.',
@@ -385,6 +391,13 @@ class CheckinPreview extends Component
         return in_array($this->form['protein_status'] ?? null, ['partial', 'no'], true);
     }
 
+    private function hasConditioningLoad(): bool
+    {
+        return (int) ($this->form['conditioning_sessions'] ?? 0) > 0
+            || (bool) ($this->form['pickup_monday'] ?? false)
+            || (bool) ($this->form['pickup_thursday'] ?? false);
+    }
+
     private function proteinStatusFromDays(mixed $days): ?string
     {
         if ($days === null || $days === '') {
@@ -403,6 +416,10 @@ class CheckinPreview extends Component
     private function stepErrorMessage(int $step): string
     {
         if ($step === 1) {
+            if ($this->hasConditioningLoad() && (($this->form['total_training_minutes'] ?? null) === null || ($this->form['highest_session_rpe'] ?? null) === null)) {
+                return 'Vul ook de minuten en zwaarste RPE van je conditie/pickup in.';
+            }
+
             return 'Kies eerst hoeveel keer je kracht, conditie en mobiliteit/preventie hebt gedaan.';
         }
 

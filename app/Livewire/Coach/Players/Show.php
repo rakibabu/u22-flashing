@@ -8,7 +8,10 @@ use App\Models\Player;
 use App\Services\CoachAdviceMailService;
 use App\Services\PlayerAdviceService;
 use App\Services\WhatsAppMessageService;
+use Carbon\CarbonInterface;
+use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Carbon;
 use Livewire\Component;
 
 class Show extends Component
@@ -18,6 +21,8 @@ class Show extends Component
     public Player $player;
 
     public string $adviceBody = '';
+
+    public string $adviceWeek = '';
 
     public bool $visibleToPlayer = false;
 
@@ -35,7 +40,32 @@ class Show extends Component
     {
         $this->authorize('view', $player);
         $this->player = $player;
-        $this->adviceBody = $adviceService->evaluate($player)['advice'];
+        $this->adviceWeek = $this->formatWeek($this->defaultAdviceWeek());
+        $this->refreshAdviceBody($adviceService);
+    }
+
+    public function previousAdviceWeek(): void
+    {
+        $this->adviceWeek = $this->formatWeek($this->selectedAdviceWeekStart()->subWeek());
+        $this->refreshAdviceBody(app(PlayerAdviceService::class));
+    }
+
+    public function nextAdviceWeek(): void
+    {
+        $this->adviceWeek = $this->formatWeek($this->clampToCurrentWeek($this->selectedAdviceWeekStart()->addWeek()));
+        $this->refreshAdviceBody(app(PlayerAdviceService::class));
+    }
+
+    public function currentAdviceWeek(): void
+    {
+        $this->adviceWeek = $this->formatWeek(now()->startOfWeek());
+        $this->refreshAdviceBody(app(PlayerAdviceService::class));
+    }
+
+    public function updatedAdviceWeek(): void
+    {
+        $this->adviceWeek = $this->formatWeek($this->selectedAdviceWeekStart());
+        $this->refreshAdviceBody(app(PlayerAdviceService::class));
     }
 
     public function regenerateInvite(): void
@@ -52,10 +82,12 @@ class Show extends Component
 
         $this->validate(['adviceBody' => ['required', 'string', 'max:5000']]);
 
+        $weekStart = $this->selectedAdviceWeekStart();
+
         $coachNote = CoachNote::query()->create([
             'player_id' => $this->player->id,
             'coach_user_id' => auth()->id(),
-            'week_start_date' => now()->startOfWeek()->toDateString(),
+            'week_start_date' => $weekStart->toDateString(),
             'type' => 'advice',
             'title' => 'Coachadvies',
             'body' => $this->adviceBody,
@@ -122,7 +154,7 @@ class Show extends Component
         $this->dispatch('advice-deleted');
     }
 
-    public function render(PlayerAdviceService $adviceService, WhatsAppMessageService $whatsAppMessageService)
+    public function render(PlayerAdviceService $adviceService, WhatsAppMessageService $whatsAppMessageService): View
     {
         $this->player->load([
             'settings',
@@ -131,14 +163,91 @@ class Show extends Component
             'coachNotes' => fn ($query) => $query->latest(),
             'testResults' => fn ($query) => $query->latest('test_date'),
         ]);
-        $evaluation = $adviceService->evaluate($this->player);
+        $weekStart = $this->selectedAdviceWeekStart();
+        $advicePlayer = $this->playerForAdviceWeek($weekStart);
+        $selectedAdviceCheckin = $advicePlayer->checkins->first(fn ($checkin): bool => $checkin->week_start_date->isSameDay($weekStart));
+        $evaluation = $adviceService->evaluate($advicePlayer, $selectedAdviceCheckin, $weekStart);
+        $currentWeekStart = now()->startOfWeek();
 
         return view('livewire.coach.players.show', [
             'evaluation' => $evaluation,
-            'bulk' => $this->player->isMuscleGain() ? $adviceService->bulkSummary($this->player) : null,
+            'bulk' => $this->player->isMuscleGain() ? $adviceService->bulkSummary($advicePlayer, $weekStart) : null,
             'timeline' => $adviceService->timelineFor($this->player),
-            'whatsAppMessage' => $whatsAppMessageService->forPlayer($this->player, $evaluation),
+            'whatsAppMessage' => $whatsAppMessageService->forPlayer($advicePlayer, $evaluation),
+            'selectedAdviceCheckin' => $selectedAdviceCheckin,
+            'selectedAdviceWeekNumber' => $weekStart->isoWeek(),
+            'selectedAdviceWeekRange' => $weekStart->format('d-m-Y').' t/m '.$weekStart->copy()->endOfWeek()->format('d-m-Y'),
+            'currentAdviceWeekValue' => $this->formatWeek($currentWeekStart),
+            'isCurrentAdviceWeek' => $weekStart->isSameDay($currentWeekStart),
         ])->layout('layouts.app');
+    }
+
+    private function refreshAdviceBody(PlayerAdviceService $adviceService): void
+    {
+        $weekStart = $this->selectedAdviceWeekStart();
+        $advicePlayer = $this->playerForAdviceWeek($weekStart);
+        $selectedCheckin = $advicePlayer->checkins->first(fn ($checkin): bool => $checkin->week_start_date->isSameDay($weekStart));
+
+        $this->adviceBody = $adviceService->evaluate($advicePlayer, $selectedCheckin, $weekStart)['advice'];
+    }
+
+    private function defaultAdviceWeek(): CarbonInterface
+    {
+        $latestSubmittedCheckin = $this->player->checkins()
+            ->whereNotNull('submitted_at')
+            ->latest('week_start_date')
+            ->first();
+
+        return $latestSubmittedCheckin?->week_start_date ?? now()->startOfWeek();
+    }
+
+    private function playerForAdviceWeek(CarbonInterface $weekStart): Player
+    {
+        $player = $this->player->fresh(['settings']) ?? $this->player;
+
+        $player->setRelation(
+            'checkins',
+            $player->checkins()
+                ->whereDate('week_start_date', '<=', $weekStart->toDateString())
+                ->whereNotNull('submitted_at')
+                ->latest('week_start_date')
+                ->get(),
+        );
+
+        return $player;
+    }
+
+    private function selectedAdviceWeekStart(): CarbonInterface
+    {
+        $week = $this->adviceWeek;
+
+        if (preg_match('/^(?<year>\d{4})-W(?<week>\d{2})$/', $week, $matches) === 1) {
+            $weekNumber = (int) $matches['week'];
+
+            if ($weekNumber >= 1 && $weekNumber <= 53) {
+                return $this->clampToCurrentWeek(
+                    now()->setISODate((int) $matches['year'], $weekNumber)->startOfWeek()
+                );
+            }
+        }
+
+        try {
+            return $this->clampToCurrentWeek(Carbon::parse($week)->startOfWeek());
+        } catch (\Throwable) {
+            return now()->startOfWeek();
+        }
+    }
+
+    private function clampToCurrentWeek(CarbonInterface $weekStart): CarbonInterface
+    {
+        $currentWeekStart = now()->startOfWeek();
+
+        return $weekStart->gt($currentWeekStart) ? $currentWeekStart : $weekStart;
+    }
+
+    private function formatWeek(CarbonInterface $weekStart): string
+    {
+        return $weekStart->copy()->startOfWeek()->format('o-\WW');
     }
 
     private function resetAdviceEditForm(): void

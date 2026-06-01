@@ -59,6 +59,10 @@
     $conditioningTarget = (int) ($settings?->conditioning_target_per_week ?? 0);
     $mobilityDone = (int) ($form['mobility_sessions'] ?? 0);
     $mobilityTarget = (int) ($settings?->mobility_target_per_week ?? 0);
+    $hasConditioningLoad = $isConditioning
+        || $conditioningDone > 0
+        || (bool) ($form['pickup_monday'] ?? false)
+        || (bool) ($form['pickup_thursday'] ?? false);
     $kcalAverage = $form['kcal_avg'] ?? null;
     $kcalMinimum = (int) ($settings?->kcal_minimum ?? 0);
     $proteinStatus = $form['protein_status'] ?? null;
@@ -115,7 +119,7 @@
         $summaryItems[] = ['label' => 'Eiwitdagen', 'value' => $displayValue($proteinTargetDays, '/7')];
     }
 
-    if ($isConditioning) {
+    if ($hasConditioningLoad) {
         $summaryItems[] = ['label' => 'Minuten', 'value' => $displayValue($form['total_training_minutes'] ?? null)];
         $summaryItems[] = ['label' => 'RPE', 'value' => $displayValue($form['highest_session_rpe'] ?? null, '/10')];
     }
@@ -439,6 +443,40 @@
                     </span>
                 </label>
             </div>
+
+            @if (! $isConditioning && $hasConditioningLoad)
+                <div class="space-y-3">
+                    <div class="u22-number-grid u22-number-grid-single">
+                        <div data-checkin-field="total_training_minutes" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('total_training_minutes')])>
+                            <div class="u22-choice-head">
+                                <p>Totale trainingsminuten</p>
+                                <span>{{ $weekLabel }}</span>
+                            </div>
+                            <label class="u22-sleep-field" for="checkin-training-minutes-inline">
+                                <input id="checkin-training-minutes-inline" class="u22-sleep-input" wire:model.live.debounce.400ms="form.total_training_minutes" type="number" min="0" max="2000" inputmode="numeric" placeholder="-">
+                                <span>min</span>
+                            </label>
+                            @error('form.total_training_minutes') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div data-checkin-field="highest_session_rpe" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('highest_session_rpe')])>
+                        <div class="u22-choice-head">
+                            <p>Zwaarste sessie</p>
+                            <span>RPE 1-10</span>
+                        </div>
+                        <div class="u22-choice-grid u22-choice-grid-score">
+                            @foreach ($scoreOptions as $value)
+                                <label class="u22-choice-chip u22-choice-chip-small" wire:key="highest-rpe-inline-{{ $value }}">
+                                    <input class="sr-only" type="radio" wire:model.live="form.highest_session_rpe" value="{{ $value }}">
+                                    <span>{{ $value }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('form.highest_session_rpe') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+            @endif
         </section>
     @elseif ($step === 2)
         <section class="space-y-5">
