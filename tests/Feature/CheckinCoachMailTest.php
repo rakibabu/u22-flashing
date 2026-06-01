@@ -31,6 +31,7 @@ function submitMaintenanceCheckin(Player $player): void
 {
     Livewire::actingAs($player->user)
         ->test(Checkin::class)
+        ->set('selectedWeekStartDate', now()->startOfWeek()->toDateString())
         ->set('form.strength_sessions', 2)
         ->set('form.conditioning_sessions', 2)
         ->set('form.mobility_sessions', 3)

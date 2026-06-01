@@ -415,6 +415,8 @@ test('speler kan coach check-in detail niet bekijken', function () {
 });
 
 test('speler kan weekcheck invullen en aanpassen', function () {
+    $this->travelTo(Carbon::parse('2026-06-04 10:00'));
+
     $player = playerWithUser();
 
     Livewire::actingAs($player->user)
@@ -511,6 +513,7 @@ test('speler kan vorige week tot en met woensdag invullen', function () {
 
     Livewire::actingAs($player->user)
         ->test(Checkin::class)
+        ->assertSet('selectedWeekStartDate', $previousWeek->toDateString())
         ->assertSee('Vorige week')
         ->assertSee($previousWeek->format('d-m-Y'))
         ->set('selectedWeekStartDate', $previousWeek->toDateString())
@@ -533,6 +536,30 @@ test('speler kan vorige week tot en met woensdag invullen', function () {
         ->and($checkin->submitted_at)->not->toBeNull();
 });
 
+test('speler start op deze week als vorige week al verstuurd is', function () {
+    $this->travelTo(Carbon::parse('2026-06-03 10:00'));
+
+    $player = playerWithUser();
+    $previousWeek = now()->startOfWeek()->subWeek();
+
+    WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => $previousWeek->toDateString(),
+        'strength_sessions' => 2,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'sleep_avg_hours' => 7,
+        'energy_score' => 7,
+        'soreness_score' => 3,
+        'submitted_at' => now(),
+    ]);
+
+    Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->assertSet('selectedWeekStartDate', now()->startOfWeek()->toDateString())
+        ->assertSee('Deze week');
+});
+
 test('speler ziet na woensdag dat vorige week gemist is', function () {
     $this->travelTo(Carbon::parse('2026-06-04 10:00'));
 
@@ -551,6 +578,66 @@ test('speler ziet na woensdag dat vorige week gemist is', function () {
         ->assertDontSee('open t/m woensdag')
         ->set('selectedWeekStartDate', $previousWeek->toDateString())
         ->assertHasErrors(['selectedWeekStartDate']);
+});
+
+test('verkeerd gekoppelde weekcheck kan veilig naar een andere week worden verplaatst', function () {
+    $player = playerWithUser(['name' => 'Luuk van Eijk']);
+
+    $checkin = WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => '2026-06-01',
+        'strength_sessions' => 2,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'sleep_avg_hours' => 7,
+        'energy_score' => 7,
+        'soreness_score' => 3,
+        'submitted_at' => Carbon::parse('2026-06-01 07:00'),
+    ]);
+
+    $this->artisan('app:move-weekly-checkin-week', [
+        'player' => 'Luuk van Eijk',
+        'from_week' => '2026-06-01',
+        'to_week' => '2026-05-25',
+    ])->assertSuccessful();
+
+    expect($checkin->refresh()->week_start_date->toDateString())->toBe('2026-05-25');
+});
+
+test('weekcheck verplaatsen stopt als de doelweek al bestaat', function () {
+    $player = playerWithUser(['name' => 'Luuk van Eijk']);
+
+    $source = WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => '2026-06-01',
+        'strength_sessions' => 2,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'sleep_avg_hours' => 7,
+        'energy_score' => 7,
+        'soreness_score' => 3,
+        'submitted_at' => Carbon::parse('2026-06-01 07:00'),
+    ]);
+
+    WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => '2026-05-25',
+        'strength_sessions' => 1,
+        'conditioning_sessions' => 1,
+        'mobility_sessions' => 1,
+        'sleep_avg_hours' => 6,
+        'energy_score' => 5,
+        'soreness_score' => 5,
+        'submitted_at' => Carbon::parse('2026-05-31 20:00'),
+    ]);
+
+    $this->artisan('app:move-weekly-checkin-week', [
+        'player' => 'Luuk van Eijk',
+        'from_week' => '2026-06-01',
+        'to_week' => '2026-05-25',
+    ])->assertFailed();
+
+    expect($source->refresh()->week_start_date->toDateString())->toBe('2026-06-01');
 });
 
 test('speler krijgt duidelijke stapmelding bij ontbrekende checkin velden', function () {

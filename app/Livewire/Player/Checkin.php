@@ -69,7 +69,7 @@ class Checkin extends Component
         $player = auth()->user()->player;
         abort_unless($player, 403);
 
-        $this->selectedWeekStartDate = now()->startOfWeek()->toDateString();
+        $this->selectedWeekStartDate = $this->defaultWeekStart($player)->toDateString();
 
         $this->loadCheckinForSelectedWeek($player);
     }
@@ -751,6 +751,18 @@ class Checkin extends Component
         return auth()->user()->player()->with('settings')->firstOrFail();
     }
 
+    private function defaultWeekStart(Player $player): CarbonInterface
+    {
+        $currentWeekStart = now()->startOfWeek();
+        $previousWeekStart = $currentWeekStart->copy()->subWeek();
+
+        if ($this->previousWeekIsOpen() && ! $this->hasSubmittedCheckinForWeek($player, $previousWeekStart)) {
+            return $previousWeekStart;
+        }
+
+        return $currentWeekStart;
+    }
+
     private function loadCheckinForSelectedWeek(Player $player): void
     {
         $weekStart = $this->selectedWeekStart();
@@ -863,8 +875,14 @@ class Checkin extends Component
 
     private function hasCheckinForWeek(Player $player, CarbonInterface $weekStart): bool
     {
+        return $this->hasSubmittedCheckinForWeek($player, $weekStart);
+    }
+
+    private function hasSubmittedCheckinForWeek(Player $player, CarbonInterface $weekStart): bool
+    {
         return $player->checkins()
             ->whereDate('week_start_date', $weekStart->toDateString())
+            ->whereNotNull('submitted_at')
             ->exists();
     }
 

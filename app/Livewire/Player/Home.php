@@ -19,11 +19,11 @@ class Home extends Component
             'coachNotes' => fn ($query) => $query->where('visible_to_player', true)->latest(),
         ])->firstOrFail();
 
-        $hasPreviousWeekCheckin = $player->checkins->contains(fn ($checkin): bool => $checkin->week_start_date->isSameDay($previousWeekStart));
+        $hasPreviousWeekCheckin = $player->checkins->contains(fn ($checkin): bool => $checkin->week_start_date->isSameDay($previousWeekStart) && $checkin->submitted_at !== null);
 
         return view('livewire.player.home', [
             'player' => $player,
-            'hasCheckinThisWeek' => $player->checkins->contains(fn ($checkin): bool => $checkin->week_start_date->isSameDay($currentWeekStart)),
+            'hasCheckinThisWeek' => $player->checkins->contains(fn ($checkin): bool => $checkin->week_start_date->isSameDay($currentWeekStart) && $checkin->submitted_at !== null),
             'hasPreviousWeekCheckin' => $hasPreviousWeekCheckin,
             'previousWeekIsOpen' => now()->dayOfWeekIso <= 3,
             'missedPreviousWeekCheckin' => now()->dayOfWeekIso > 3 && ! $hasPreviousWeekCheckin,
