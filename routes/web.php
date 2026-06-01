@@ -21,8 +21,8 @@ use App\Livewire\Player\Program as PlayerProgram;
 use App\Livewire\Player\Progress as PlayerProgress;
 use App\Livewire\Public\TeamActivation;
 use App\Livewire\TeamDocuments\Show as TeamDocumentShow;
-use App\Models\Player;
 use App\Services\PlayerAdviceService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check()
@@ -55,16 +55,18 @@ Route::middleware(['auth', 'role:coach'])->prefix('coach')->name('coach.')->grou
     Route::get('documents/{type}', TeamDocumentShow::class)->name('documents.show');
     Route::get('documents/{teamDocument}/pdf', TeamDocumentPdfController::class)->name('documents.pdf');
     Route::get('analysis-export', AnalysisExport::class)->name('analysis-export');
-    Route::get('analysis-export.csv', function (PlayerAdviceService $adviceService) {
-        $players = Player::query()->with(['settings', 'latestCheckin', 'checkins' => fn ($query) => $query->latest('week_start_date')->limit(3)])->where('active', true)->orderBy('name')->get();
+    Route::get('analysis-export.csv', function (Request $request, PlayerAdviceService $adviceService) {
+        $weekInput = $request->query('week');
+        $weekStart = $adviceService->normalizeWeekStart(is_string($weekInput) && $weekInput !== '' ? $weekInput : now()->startOfWeek()->subWeek());
+        $players = $adviceService->playersForAnalysis($weekStart);
 
-        return response()->streamDownload(function () use ($players, $adviceService): void {
+        return response()->streamDownload(function () use ($players, $adviceService, $weekStart): void {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['player', 'program', 'readiness', 'status', 'reason', 'compliance', 'week_start', 'weight_kg', 'weight_trend', 'strength', 'conditioning', 'mobility', 'rest_day', 'sleep', 'energy', 'pain', 'training_load', 'kcal_avg', 'protein_status', 'protein_avg_grams', 'protein_target_days', 'protein_notes', 'next_action', 'advice']);
+            fputcsv($out, ['player', 'program', 'readiness', 'status', 'reason', 'compliance', 'week_start', 'history_weeks', 'weight_kg', 'weight_trend', 'strength', 'conditioning', 'mobility', 'rest_day', 'sleep', 'energy', 'pain', 'training_load', 'kcal_avg', 'protein_status', 'protein_avg_grams', 'protein_target_days', 'protein_notes', 'history_summary']);
 
             foreach ($players as $player) {
-                $evaluation = $adviceService->evaluate($player);
-                $checkin = $player->latestCheckin;
+                $checkin = $player->checkins->first(fn ($checkin): bool => $checkin->week_start_date->isSameDay($weekStart));
+                $evaluation = $adviceService->evaluate($player, $checkin, $weekStart);
 
                 fputcsv($out, [
                     $player->name,
@@ -74,6 +76,7 @@ Route::middleware(['auth', 'role:coach'])->prefix('coach')->name('coach.')->grou
                     $evaluation['reason'],
                     $evaluation['compliance'],
                     $checkin?->week_start_date?->toDateString(),
+                    $player->checkins->count(),
                     $checkin?->weight_kg,
                     $evaluation['weight_trend'],
                     $checkin?->strength_sessions,
@@ -94,13 +97,12 @@ Route::middleware(['auth', 'role:coach'])->prefix('coach')->name('coach.')->grou
                     $checkin?->protein_avg_grams,
                     $checkin?->protein_target_days,
                     $checkin?->protein_notes,
-                    $evaluation['next_action'],
-                    $evaluation['advice'],
+                    $adviceService->checkinHistorySummary($player, $weekStart),
                 ]);
             }
 
             fclose($out);
-        }, 'u22-analysis-export.csv', ['Content-Type' => 'text/csv']);
+        }, 'u22-analysis-export-'.$weekStart->toDateString().'.csv', ['Content-Type' => 'text/csv']);
     })->name('analysis-export.csv');
 });
 

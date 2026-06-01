@@ -19,8 +19,16 @@ class WeeklyCheckinPolicy
 
     public function update(User $user, WeeklyCheckin $weeklyCheckin): bool
     {
+        $currentWeekStart = now()->startOfWeek();
+
         return $user->isPlayer()
             && $weeklyCheckin->player->user_id === $user->id
-            && $weeklyCheckin->week_start_date->isSameDay(now()->startOfWeek());
+            && (
+                $weeklyCheckin->week_start_date->isSameDay($currentWeekStart)
+                || (
+                    $weeklyCheckin->week_start_date->isSameDay($currentWeekStart->copy()->subWeek())
+                    && now()->dayOfWeekIso <= 3
+                )
+            );
     }
 }

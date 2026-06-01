@@ -8,11 +8,26 @@ class Home extends Component
 {
     public function render()
     {
-        $player = auth()->user()->player()->with(['latestCheckin', 'coachNotes' => fn ($query) => $query->where('visible_to_player', true)->latest()])->firstOrFail();
+        $currentWeekStart = now()->startOfWeek();
+        $previousWeekStart = $currentWeekStart->copy()->subWeek();
+
+        $player = auth()->user()->player()->with([
+            'checkins' => fn ($query) => $query->whereIn('week_start_date', [
+                $currentWeekStart->toDateString(),
+                $previousWeekStart->toDateString(),
+            ]),
+            'coachNotes' => fn ($query) => $query->where('visible_to_player', true)->latest(),
+        ])->firstOrFail();
+
+        $hasPreviousWeekCheckin = $player->checkins->contains(fn ($checkin): bool => $checkin->week_start_date->isSameDay($previousWeekStart));
 
         return view('livewire.player.home', [
             'player' => $player,
-            'hasCheckinThisWeek' => $player->latestCheckin?->week_start_date?->isSameDay(now()->startOfWeek()) ?? false,
+            'hasCheckinThisWeek' => $player->checkins->contains(fn ($checkin): bool => $checkin->week_start_date->isSameDay($currentWeekStart)),
+            'hasPreviousWeekCheckin' => $hasPreviousWeekCheckin,
+            'previousWeekIsOpen' => now()->dayOfWeekIso <= 3,
+            'missedPreviousWeekCheckin' => now()->dayOfWeekIso > 3 && ! $hasPreviousWeekCheckin,
+            'previousWeekRange' => $previousWeekStart->format('d-m-Y').' t/m '.$previousWeekStart->copy()->endOfWeek()->format('d-m-Y'),
             'latestAdvice' => $player->coachNotes->first(),
         ])->layout('layouts.app');
     }

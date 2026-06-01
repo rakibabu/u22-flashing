@@ -10,6 +10,8 @@
     'validationScrollField' => null,
     'validationScrollTick' => 0,
     'saved' => false,
+    'selectedWeekStartDate' => null,
+    'weekLabel' => 'Deze week',
 ])
 
 @php
@@ -122,7 +124,7 @@
         'u22-checkin-draft',
         $preview ? 'preview' : 'player',
         $player->id,
-        now()->startOfWeek()->toDateString(),
+        $selectedWeekStartDate ?? now()->startOfWeek()->toDateString(),
     ]);
 @endphp
 
@@ -658,7 +660,7 @@
                 <div data-checkin-field="total_training_minutes" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('total_training_minutes')])>
                     <div class="u22-choice-head">
                         <p>Totale trainingsminuten</p>
-                        <span>Deze week</span>
+                        <span>{{ $weekLabel }}</span>
                     </div>
                     <label class="u22-sleep-field" for="checkin-training-minutes">
                         <input id="checkin-training-minutes" class="u22-sleep-input" wire:model.live.debounce.400ms="form.total_training_minutes" type="number" min="0" max="2000" inputmode="numeric" placeholder="-">

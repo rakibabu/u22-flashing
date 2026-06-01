@@ -1,6 +1,18 @@
 <div class="space-y-6">
     <x-page-header title="Hoi {{ $player->name }}" description="Jouw U22 zomerprogramma voor deze week." />
 
+    @if ($missedPreviousWeekCheckin)
+        <div class="rounded-lg border border-red-200 bg-red-50 p-5 text-red-950 dark:border-red-900 dark:bg-red-950 dark:text-red-100">
+            <h2 class="text-lg font-semibold">Weekcheck gemist</h2>
+            <p class="mt-1 text-sm">De check-in voor {{ $previousWeekRange }} is gesloten. Vul deze week op tijd in en stuur je coach kort wat er vorige week speelde.</p>
+        </div>
+    @elseif ($previousWeekIsOpen && ! $hasPreviousWeekCheckin)
+        <div class="rounded-lg border border-flash-orange/30 bg-flash-orange/10 p-5 text-primary-900 dark:border-flash-orange/40 dark:bg-flash-orange/15 dark:text-orange-50">
+            <h2 class="text-lg font-semibold">Vorige week kan nog</h2>
+            <p class="mt-1 text-sm opacity-80">Tot en met woensdag kun je in de weekcheck ook vorige week selecteren.</p>
+        </div>
+    @endif
+
     <div class="grid gap-3 sm:grid-cols-2">
         <a href="{{ route('player.program') }}" wire:navigate class="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
             <p class="text-sm text-zinc-500">Jouw programma</p>
@@ -9,7 +21,7 @@
         <a href="{{ route('player.checkin') }}" wire:navigate class="rounded-lg border border-orange-200 bg-orange-50 p-5 text-orange-950 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-100">
             <p class="text-sm opacity-80">Weekcheck</p>
             <h2 class="mt-1 text-xl font-semibold">{{ $hasCheckinThisWeek ? 'Ingevuld' : 'Nog invullen' }}</h2>
-            <p class="mt-2 text-sm opacity-80">Elke zondag opnieuw via deze knop.</p>
+            <p class="mt-2 text-sm opacity-80">Kies in het formulier de week die je wilt invullen.</p>
         </a>
     </div>
 

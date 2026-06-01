@@ -6,11 +6,30 @@
         </x-slot:actions>
     </x-page-header>
 
+    <section class="rounded-lg border border-primary-800/10 bg-white p-4 shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-xs font-medium uppercase text-flash-orange">Weekoverzicht</p>
+                <h2 class="mt-1 font-display text-3xl font-normal leading-none text-primary-900 dark:text-white">Week {{ $selectedWeekNumber }}</h2>
+                <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{{ $selectedWeekRange }}</p>
+            </div>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <flux:button size="sm" icon="chevron-left" wire:click="previousWeek">Vorige</flux:button>
+                <flux:field class="sm:min-w-48">
+                    <flux:label>Week</flux:label>
+                    <flux:input type="week" wire:model.live="week" max="{{ $currentWeekValue }}" />
+                </flux:field>
+                <flux:button size="sm" icon="calendar-days" wire:click="currentWeek">Deze week</flux:button>
+                <flux:button size="sm" icon="chevron-right" wire:click="nextWeek" :disabled="$isCurrentWeek">Volgende</flux:button>
+            </div>
+        </div>
+    </section>
+
     <section class="overflow-hidden rounded-lg border border-primary-800/10 bg-white shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
         <div class="border-b border-flash-orange/30 bg-primary-800 px-4 py-3 text-white">
-            <h2 class="font-display text-2xl font-normal leading-none">Vandaag bijsturen</h2>
+            <h2 class="font-display text-2xl font-normal leading-none">Week bijsturen</h2>
             <div class="mt-2 h-1 w-10 bg-flash-orange"></div>
-            <p class="mt-2 text-sm text-white/75">Eén duidelijke actie per speler, klaar om te kopiëren of op te volgen.</p>
+            <p class="mt-2 text-sm text-white/75">Eén duidelijke actie per speler voor de gekozen week, klaar om te kopiëren of op te volgen.</p>
         </div>
         <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
             @foreach ($actionRows as $row)
@@ -42,7 +61,7 @@
 
     <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <x-metric-card label="Actieve spelers" :value="$activePlayers" />
-        <x-metric-card label="Check-ins deze week" :value="$checkinsThisWeek" tone="green" />
+        <x-metric-card :label="$isCurrentWeek ? 'Check-ins deze week' : 'Check-ins in week'" :value="$checkinsThisWeek" tone="green" />
         <x-metric-card label="Niet ingevuld" :value="$missingThisWeek" tone="orange" />
         <x-metric-card label="Rode signalen" :value="$redSignals" tone="red" />
         <x-metric-card label="Oranje signalen" :value="$orangeSignals" tone="orange" />
@@ -56,7 +75,7 @@
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <h2 class="font-semibold">Check-ins ontbreken</h2>
-                    <p class="mt-1 text-sm opacity-80">{{ $missingPlayers->count() }} speler(s) hebben deze week nog niet ingevuld.</p>
+                    <p class="mt-1 text-sm opacity-80">{{ $missingPlayers->count() }} speler(s) {{ $isCurrentWeek ? 'hebben deze week nog niet ingevuld.' : 'hebben in deze week geen check-in.' }}</p>
                 </div>
                 @if ($missingPlayers->isNotEmpty())
                     <x-copy-button size="sm" :text="$groupReminder" label="Kopieer reminder voor deze spelers" />
@@ -122,7 +141,7 @@
 
     <div class="overflow-hidden rounded-lg border border-primary-800/10 bg-white shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
         <div class="border-b border-primary-800/10 px-4 py-3 dark:border-flash-orange/20">
-            <h2 class="font-display text-2xl font-normal leading-none text-primary-900 dark:text-white">Deze week bijsturen</h2>
+            <h2 class="font-display text-2xl font-normal leading-none text-primary-900 dark:text-white">Weekoverzicht spelers</h2>
             <div class="mt-2 h-1 w-10 bg-flash-orange"></div>
         </div>
         <div class="overflow-x-auto">

@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Coach\AnalysisExport;
 use App\Livewire\Coach\Dashboard;
 use App\Livewire\Coach\Players\CheckinPreview;
 use App\Livewire\Coach\Players\Create;
@@ -16,6 +17,7 @@ use App\Models\User;
 use App\Models\WeeklyCheckin;
 use App\Services\PlayerAdviceService;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -447,7 +449,7 @@ test('speler kan weekcheck invullen en aanpassen', function () {
         ->call('save')
         ->assertSet('saved', true)
         ->assertSee('Bedankt, je check-in is opgeslagen.')
-        ->assertSee('Elke zondag kun je via Weekcheck opnieuw invullen')
+        ->assertSee('Je check-in voor deze week is opgeslagen.')
         ->assertDontSee('Verstuur weekcheck');
 
     expect($player->checkins()->count())->toBe(1);
@@ -464,6 +466,8 @@ test('speler kan weekcheck invullen en aanpassen', function () {
 });
 
 test('speler kan alleen de huidige weekcheck aanpassen', function () {
+    $this->travelTo(Carbon::parse('2026-06-04 10:00'));
+
     $player = playerWithUser();
     $previousWeek = now()->startOfWeek()->subWeek();
 
@@ -497,6 +501,56 @@ test('speler kan alleen de huidige weekcheck aanpassen', function () {
     expect($oldCheckin->refresh()->strength_sessions)->toBe(1)
         ->and($player->checkins()->count())->toBe(2)
         ->and($player->checkins()->latest('week_start_date')->first()->week_start_date->isSameDay(now()->startOfWeek()))->toBeTrue();
+});
+
+test('speler kan vorige week tot en met woensdag invullen', function () {
+    $this->travelTo(Carbon::parse('2026-06-03 10:00'));
+
+    $player = playerWithUser();
+    $previousWeek = now()->startOfWeek()->subWeek();
+
+    Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->assertSee('Vorige week')
+        ->assertSee($previousWeek->format('d-m-Y'))
+        ->set('selectedWeekStartDate', $previousWeek->toDateString())
+        ->assertSet('selectedWeekStartDate', $previousWeek->toDateString())
+        ->set('form.strength_sessions', 2)
+        ->set('form.conditioning_sessions', 2)
+        ->set('form.mobility_sessions', 3)
+        ->set('form.had_full_rest_day', true)
+        ->set('form.sleep_avg_hours', 7.5)
+        ->set('form.energy_score', 8)
+        ->set('form.soreness_score', 3)
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertSet('saved', true)
+        ->assertSee('Je check-in voor vorige week is opgeslagen.');
+
+    $checkin = $player->checkins()->firstOrFail();
+
+    expect($checkin->week_start_date->isSameDay($previousWeek))->toBeTrue()
+        ->and($checkin->submitted_at)->not->toBeNull();
+});
+
+test('speler ziet na woensdag dat vorige week gemist is', function () {
+    $this->travelTo(Carbon::parse('2026-06-04 10:00'));
+
+    $player = playerWithUser();
+    $previousWeek = now()->startOfWeek()->subWeek();
+
+    $this->actingAs($player->user)
+        ->get(route('player.home'))
+        ->assertOk()
+        ->assertSee('Weekcheck gemist')
+        ->assertSee($previousWeek->format('d-m-Y'));
+
+    Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->assertSee('Weekcheck gemist')
+        ->assertDontSee('open t/m woensdag')
+        ->set('selectedWeekStartDate', $previousWeek->toDateString())
+        ->assertHasErrors(['selectedWeekStartDate']);
 });
 
 test('speler krijgt duidelijke stapmelding bij ontbrekende checkin velden', function () {
@@ -872,19 +926,101 @@ test('speler zonder volledige rustdag krijgt oranje signaal', function () {
 });
 
 test('coach kan analyse-export bekijken', function () {
-    playerWithUser(['name' => 'Export Speler']);
+    $this->travelTo(Carbon::parse('2026-06-09 10:00'));
+
+    $player = playerWithUser(['name' => 'Export Speler']);
+    $withoutSelectedWeek = playerWithUser(['name' => 'Geen Export Speler']);
+    $draftOnly = playerWithUser(['name' => 'Concept Export Speler']);
+
+    WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => now()->startOfWeek()->subWeeks(2)->toDateString(),
+        'strength_sessions' => 1,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 2,
+        'sleep_avg_hours' => 7,
+        'energy_score' => 6,
+        'soreness_score' => 5,
+        'submitted_at' => now()->subWeek(),
+        'notes' => 'Historische context.',
+    ]);
+
+    WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => now()->startOfWeek()->subWeek()->toDateString(),
+        'strength_sessions' => 2,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'had_full_rest_day' => true,
+        'sleep_avg_hours' => 8,
+        'energy_score' => 8,
+        'soreness_score' => 3,
+        'submitted_at' => now(),
+    ]);
+
+    WeeklyCheckin::query()->create([
+        'player_id' => $withoutSelectedWeek->id,
+        'week_start_date' => now()->startOfWeek()->subWeeks(2)->toDateString(),
+        'strength_sessions' => 2,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'submitted_at' => now(),
+    ]);
+
+    WeeklyCheckin::query()->create([
+        'player_id' => $draftOnly->id,
+        'week_start_date' => now()->startOfWeek()->subWeek()->toDateString(),
+        'strength_sessions' => 2,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+    ]);
 
     $this->actingAs(coachUser())->get(route('coach.analysis-export'))
         ->assertOk()
-        ->assertSee('Analyseer deze U22 zomerprogramma data');
+        ->assertSee('Schrijf persoonlijke coachadviezen')
+        ->assertSee('Adviesweek 2026-06-01')
+        ->assertSee('Export Speler')
+        ->assertSee('Historische check-ins in context: 2')
+        ->assertSee('Historische context.')
+        ->assertDontSee('Geen Export Speler')
+        ->assertDontSee('Concept Export Speler')
+        ->assertDontSee('Next action');
 });
 
 test('coach kan csv export downloaden', function () {
-    playerWithUser(['name' => 'Csv Speler']);
+    $this->travelTo(Carbon::parse('2026-06-09 10:00'));
 
-    $this->actingAs(coachUser())->get(route('coach.analysis-export.csv'))
+    $player = playerWithUser(['name' => 'Csv Speler']);
+    $excluded = playerWithUser(['name' => 'Csv Zonder Week']);
+
+    WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => now()->startOfWeek()->subWeek()->toDateString(),
+        'strength_sessions' => 2,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'sleep_avg_hours' => 8,
+        'energy_score' => 8,
+        'soreness_score' => 3,
+        'submitted_at' => now(),
+    ]);
+
+    WeeklyCheckin::query()->create([
+        'player_id' => $excluded->id,
+        'week_start_date' => now()->startOfWeek()->toDateString(),
+        'strength_sessions' => 2,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'submitted_at' => now(),
+    ]);
+
+    $response = $this->actingAs(coachUser())->get(route('coach.analysis-export.csv', ['week' => '2026-W23']))
         ->assertOk()
         ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+
+    expect($response->streamedContent())->toContain('Csv Speler')
+        ->not->toContain('Csv Zonder Week')
+        ->not->toContain('advice');
 });
 
 test('coach dashboard toont actiecentrum met next action en whatsapp', function () {
@@ -900,10 +1036,75 @@ test('coach dashboard toont actiecentrum met next action en whatsapp', function 
 
     Livewire::actingAs(coachUser())
         ->test(Dashboard::class)
-        ->assertSee('Vandaag bijsturen')
+        ->assertSee('Week bijsturen')
         ->assertSee('Plan deze week minimaal 2 krachttrainingen.')
         ->assertSee('Kopieer WhatsApp')
         ->assertDontSee('@js(', false);
+});
+
+test('coach kan dashboard op een vorige week zetten', function () {
+    $this->travelTo(Carbon::parse('2026-06-01 09:00'));
+
+    $player = playerWithUser(['name' => 'Vorige Week Speler', 'program_type' => Player::Maintenance]);
+
+    WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => now()->startOfWeek()->subWeek()->toDateString(),
+        'strength_sessions' => 2,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'had_full_rest_day' => true,
+        'sleep_avg_hours' => 8,
+        'energy_score' => 7,
+        'soreness_score' => 4,
+        'submitted_at' => now(),
+    ]);
+
+    WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => now()->startOfWeek()->toDateString(),
+        'strength_sessions' => 1,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'submitted_at' => now(),
+    ]);
+
+    Livewire::actingAs(coachUser())
+        ->test(Dashboard::class)
+        ->assertSee('Te weinig krachttraining')
+        ->set('week', '2026-W22')
+        ->assertSet('week', '2026-W22')
+        ->assertSee('Week 22')
+        ->assertSee('25-05-2026 t/m 31-05-2026')
+        ->assertSee('Op schema')
+        ->assertSee('100%')
+        ->assertDontSee('Te weinig krachttraining');
+});
+
+test('dashboard advies en opvolging gebruiken de geselecteerde week', function () {
+    $this->travelTo(Carbon::parse('2026-06-01 09:00'));
+
+    $coach = coachUser();
+    $player = playerWithUser(['name' => 'Advies Week Speler', 'program_type' => Player::Maintenance]);
+
+    Livewire::actingAs($coach)
+        ->test(Dashboard::class)
+        ->set('week', '2026-W22')
+        ->call('generateAdvice', $player->id)
+        ->call('markFollowedUp', $player->id);
+
+    $advice = CoachNote::query()
+        ->whereBelongsTo($player)
+        ->where('type', 'advice')
+        ->firstOrFail();
+
+    $followUp = CoachNote::query()
+        ->whereBelongsTo($player)
+        ->where('type', 'training')
+        ->firstOrFail();
+
+    expect($advice->week_start_date->toDateString())->toBe('2026-05-25')
+        ->and($followUp->week_start_date->toDateString())->toBe('2026-05-25');
 });
 
 test('coach kan actie markeren als opgevolgd', function () {
@@ -943,8 +1144,22 @@ test('speler detail toont timeline en bulk dashboard', function () {
         ->assertDontSee('@js(', false);
 });
 
-test('analyse export bevat next action en training load', function () {
+test('analyse export gebruikt gekozen week en training load historie', function () {
+    $this->travelTo(Carbon::parse('2026-06-01 09:00'));
+
     $player = playerWithUser(['name' => 'Load Export']);
+    WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => now()->startOfWeek()->subWeek()->toDateString(),
+        'strength_sessions' => 1,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'total_training_minutes' => 80,
+        'highest_session_rpe' => 6,
+        'calculated_training_load' => 480,
+        'submitted_at' => now(),
+    ]);
+
     WeeklyCheckin::query()->create([
         'player_id' => $player->id,
         'week_start_date' => now()->startOfWeek()->toDateString(),
@@ -957,12 +1172,14 @@ test('analyse export bevat next action en training load', function () {
         'submitted_at' => now(),
     ]);
 
-    $this->actingAs(coachUser())->get(route('coach.analysis-export'))
-        ->assertOk()
+    Livewire::actingAs(coachUser())
+        ->test(AnalysisExport::class)
+        ->set('week', '2026-W22')
+        ->assertSee('Adviesweek 2026-05-25')
+        ->assertSee('Load Export')
         ->assertSee('Teamdoel')
-        ->assertSee('Training load')
-        ->assertSee('Volledige rustdag')
-        ->assertSee('Next action');
+        ->assertSee('load 480')
+        ->assertDontSee('load 700');
 });
 
 test('seeders volgen targets uit de spelersversie pdf', function () {

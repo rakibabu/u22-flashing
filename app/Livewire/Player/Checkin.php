@@ -5,8 +5,10 @@ namespace App\Livewire\Player;
 use App\Models\Player;
 use App\Models\WeeklyCheckin;
 use App\Services\CheckinCoachMailService;
+use Carbon\CarbonInterface;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -60,17 +62,31 @@ class Checkin extends Component
 
     public int $step = 1;
 
+    public string $selectedWeekStartDate = '';
+
     public function mount(): void
     {
         $player = auth()->user()->player;
         abort_unless($player, 403);
 
-        $checkin = $player->checkins()->whereDate('week_start_date', now()->startOfWeek()->toDateString())->first();
+        $this->selectedWeekStartDate = now()->startOfWeek()->toDateString();
 
-        if ($checkin) {
-            $this->authorize('update', $checkin);
-            $this->form = array_merge($this->form, $checkin->only(array_keys($this->form)));
+        $this->loadCheckinForSelectedWeek($player);
+    }
+
+    public function updatedSelectedWeekStartDate(): void
+    {
+        $player = $this->currentPlayer();
+
+        if (! $this->selectedWeekIsOpen()) {
+            $this->form = $this->emptyForm();
+            $this->addError('selectedWeekStartDate', 'Deze weekcheck kan niet meer worden ingevuld.');
+
+            return;
         }
+
+        $this->loadCheckinForSelectedWeek($player);
+        $this->resetValidation();
     }
 
     public function nextStep(): void
@@ -128,6 +144,7 @@ class Checkin extends Component
     {
         $player = $this->currentPlayer();
         abort_unless($player, 403);
+        $weekStart = $this->selectedWeekStartOrFail();
 
         try {
             $validated = $this->validate($this->rules($player), $this->messages(), $this->validationAttributes())['form'];
@@ -157,7 +174,7 @@ class Checkin extends Component
 
         $checkin = WeeklyCheckin::query()
             ->where('player_id', $player->id)
-            ->whereDate('week_start_date', now()->startOfWeek()->toDateString())
+            ->whereDate('week_start_date', $weekStart->toDateString())
             ->first();
 
         if ($checkin) {
@@ -167,7 +184,7 @@ class Checkin extends Component
             $this->authorize('create', WeeklyCheckin::class);
             $checkin = WeeklyCheckin::query()->create($validated + [
                 'player_id' => $player->id,
-                'week_start_date' => now()->startOfWeek(),
+                'week_start_date' => $weekStart,
                 'submitted_at' => now(),
             ]);
         }
@@ -185,10 +202,20 @@ class Checkin extends Component
     public function render()
     {
         $player = $this->currentPlayer();
+        $selectedWeekStart = $this->selectedWeekStart();
+        $previousWeekStart = now()->startOfWeek()->subWeek();
+        $hasPreviousWeekCheckin = $this->hasCheckinForWeek($player, $previousWeekStart);
 
         return view('livewire.player.checkin', [
             'player' => $player,
             'maxStep' => $this->maxStep(),
+            'weekOptions' => $this->weekOptions(),
+            'selectedWeekLabel' => $this->weekLabel($selectedWeekStart),
+            'selectedWeekRange' => $this->weekRange($selectedWeekStart),
+            'previousWeekIsOpen' => $this->previousWeekIsOpen(),
+            'hasPreviousWeekCheckin' => $hasPreviousWeekCheckin,
+            'missedPreviousWeekCheckin' => ! $this->previousWeekIsOpen() && ! $hasPreviousWeekCheckin,
+            'previousWeekRange' => $this->weekRange($previousWeekStart),
         ])->layout('layouts.app');
     }
 
@@ -282,6 +309,12 @@ class Checkin extends Component
     private function autosaveField(string $key): void
     {
         $player = $this->currentPlayer();
+        $weekStart = $this->selectedWeekStart();
+
+        if (! $this->selectedWeekIsOpen($weekStart)) {
+            return;
+        }
+
         $rules = $this->autosaveRules($player);
         $ruleKey = "form.{$key}";
 
@@ -303,7 +336,7 @@ class Checkin extends Component
 
         $checkin = WeeklyCheckin::query()
             ->where('player_id', $player->id)
-            ->whereDate('week_start_date', now()->startOfWeek()->toDateString())
+            ->whereDate('week_start_date', $weekStart->toDateString())
             ->first();
 
         if ($checkin) {
@@ -313,7 +346,7 @@ class Checkin extends Component
             $this->authorize('create', WeeklyCheckin::class);
             WeeklyCheckin::query()->create($payload + [
                 'player_id' => $player->id,
-                'week_start_date' => now()->startOfWeek(),
+                'week_start_date' => $weekStart,
             ]);
         }
 
@@ -716,6 +749,123 @@ class Checkin extends Component
     private function currentPlayer(): Player
     {
         return auth()->user()->player()->with('settings')->firstOrFail();
+    }
+
+    private function loadCheckinForSelectedWeek(Player $player): void
+    {
+        $weekStart = $this->selectedWeekStart();
+        $checkin = $player->checkins()->whereDate('week_start_date', $weekStart->toDateString())->first();
+
+        $this->form = $this->emptyForm();
+        $this->saved = false;
+        $this->autosaved = false;
+        $this->autosavedAt = null;
+        $this->stepError = null;
+        $this->validationScrollField = null;
+        $this->step = 1;
+
+        if ($checkin) {
+            $this->authorize('update', $checkin);
+            $this->form = array_merge($this->form, $checkin->only(array_keys($this->form)));
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function emptyForm(): array
+    {
+        return array_replace(array_fill_keys(array_keys($this->form), null), [
+            'had_full_rest_day' => false,
+            'pain' => false,
+        ]);
+    }
+
+    private function selectedWeekStart(): CarbonInterface
+    {
+        try {
+            return Carbon::parse($this->selectedWeekStartDate)->startOfWeek();
+        } catch (\Throwable) {
+            return now()->startOfWeek();
+        }
+    }
+
+    private function selectedWeekStartOrFail(): CarbonInterface
+    {
+        $weekStart = $this->selectedWeekStart();
+
+        if (! $this->selectedWeekIsOpen($weekStart)) {
+            throw ValidationException::withMessages([
+                'selectedWeekStartDate' => 'Deze weekcheck kan niet meer worden ingevuld.',
+            ]);
+        }
+
+        return $weekStart;
+    }
+
+    private function selectedWeekIsOpen(?CarbonInterface $weekStart = null): bool
+    {
+        $weekStart ??= $this->selectedWeekStart();
+        $currentWeekStart = now()->startOfWeek();
+
+        return $weekStart->isSameDay($currentWeekStart)
+            || ($this->previousWeekIsOpen() && $weekStart->isSameDay($currentWeekStart->copy()->subWeek()));
+    }
+
+    private function previousWeekIsOpen(): bool
+    {
+        return now()->dayOfWeekIso <= 3;
+    }
+
+    /**
+     * @return array<int, array{value:string, label:string, description:string}>
+     */
+    private function weekOptions(): array
+    {
+        $currentWeekStart = now()->startOfWeek();
+        $options = [[
+            'value' => $currentWeekStart->toDateString(),
+            'label' => 'Deze week',
+            'description' => $this->weekRange($currentWeekStart),
+        ]];
+
+        if ($this->previousWeekIsOpen()) {
+            $previousWeekStart = $currentWeekStart->copy()->subWeek();
+            $options[] = [
+                'value' => $previousWeekStart->toDateString(),
+                'label' => 'Vorige week',
+                'description' => $this->weekRange($previousWeekStart).' - open t/m woensdag',
+            ];
+        }
+
+        return $options;
+    }
+
+    private function weekLabel(CarbonInterface $weekStart): string
+    {
+        $currentWeekStart = now()->startOfWeek();
+
+        if ($weekStart->isSameDay($currentWeekStart)) {
+            return 'Deze week';
+        }
+
+        if ($weekStart->isSameDay($currentWeekStart->copy()->subWeek())) {
+            return 'Vorige week';
+        }
+
+        return 'Week '.$weekStart->isoWeek();
+    }
+
+    private function weekRange(CarbonInterface $weekStart): string
+    {
+        return $weekStart->format('d-m-Y').' t/m '.$weekStart->copy()->endOfWeek()->format('d-m-Y');
+    }
+
+    private function hasCheckinForWeek(Player $player, CarbonInterface $weekStart): bool
+    {
+        return $player->checkins()
+            ->whereDate('week_start_date', $weekStart->toDateString())
+            ->exists();
     }
 
     private function trainingLoad(?int $minutes, ?int $rpe): ?int

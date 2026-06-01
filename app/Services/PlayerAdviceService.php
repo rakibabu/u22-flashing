@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CoachNote;
 use App\Models\Player;
 use App\Models\WeeklyCheckin;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -13,34 +14,48 @@ class PlayerAdviceService
     /**
      * @return array{status:string, readiness:string, reason:string, advice:string, next_action:string, compliance:int, weight_trend:?float}
      */
-    public function evaluate(Player $player, ?WeeklyCheckin $checkin = null): array
+    public function evaluate(Player $player, ?WeeklyCheckin $checkin = null, CarbonInterface|string|null $weekStartDate = null): array
     {
-        $player->loadMissing(['settings', 'checkins' => fn ($query) => $query->orderByDesc('week_start_date')->limit(4)]);
+        $weekStart = $this->normalizeWeekStart($weekStartDate);
 
-        $checkin ??= $player->checkins->first();
+        $player->loadMissing('settings');
+
+        $checkins = $this->checkinsUntil($player, $weekStart);
+        $checkin ??= $checkins->first();
         $settings = $player->settings;
 
         if (! $checkin) {
+            $isCurrentWeek = $weekStart->isSameDay(now()->startOfWeek());
+
             return $this->result(
                 player: $player,
-                status: $player->created_at?->lt(now()->subWeeks(2)) ? 'red' : 'orange',
-                reason: $player->created_at?->lt(now()->subWeeks(2)) ? '2 weken geen check-in' : 'Geen check-in deze week',
-                advice: 'Vul de weekcheck in zodat we gericht kunnen bijsturen.',
-                nextAction: 'Stuur een korte reminder om de weekcheck vandaag in te vullen.',
+                status: $player->created_at?->lt($weekStart->copy()->subWeeks(2)) ? 'red' : 'orange',
+                reason: $player->created_at?->lt($weekStart->copy()->subWeeks(2)) ? '2 weken geen check-in' : ($isCurrentWeek ? 'Geen check-in deze week' : 'Geen check-in in deze week'),
+                advice: $isCurrentWeek ? 'Vul de weekcheck in zodat we gericht kunnen bijsturen.' : 'Er is geen check-in voor deze geselecteerde week; gebruik omliggende weken en korte context van de speler voor advies.',
+                nextAction: $isCurrentWeek ? 'Stuur een korte reminder om de weekcheck vandaag in te vullen.' : 'Neem deze ontbrekende week mee in je advies en vraag kort waarom hij mist.',
                 compliance: 0,
             );
         }
 
         $compliance = $this->trainingCompliance($player, $checkin);
-        $weightTrend = $this->weeklyWeightTrend($player->checkins);
-        $twoWeekWeightTrend = $this->twoWeekWeightTrend($player->checkins);
+        $weightTrend = $this->weeklyWeightTrend($checkins);
+        $twoWeekWeightTrend = $this->twoWeekWeightTrend($checkins);
+        $isCurrentWeek = $weekStart->isSameDay(now()->startOfWeek());
 
-        if ($checkin->week_start_date->lt(now()->startOfWeek()->subWeek())) {
-            return $this->result($player, 'red', '2 weken geen check-in', 'Eerst check-in ophalen voordat je belasting verhoogt.', 'Stuur een directe reminder en check kort waarom de check-ins ontbreken.', $compliance, $weightTrend);
+        if ($checkin->week_start_date->lt($weekStart->copy()->subWeek())) {
+            return $this->result($player, 'red', '2 weken geen check-in', 'Eerst check-in ophalen voordat je belasting verhoogt.', 'Stuur een directe reminder en check kort waarom de check-ins ontbreken.', 0, $weightTrend);
         }
 
-        if ($checkin->week_start_date->lt(now()->startOfWeek())) {
-            return $this->result($player, 'orange', 'Check-in mist deze week', 'Vul de weekcheck in zodat we gericht kunnen bijsturen.', 'Stuur een reminder om de weekcheck vandaag in te vullen.', $compliance, $weightTrend);
+        if ($checkin->week_start_date->lt($weekStart)) {
+            return $this->result(
+                $player,
+                'orange',
+                $isCurrentWeek ? 'Check-in mist deze week' : 'Check-in mist in deze week',
+                $isCurrentWeek ? 'Vul de weekcheck in zodat we gericht kunnen bijsturen.' : 'Er is geen check-in voor deze geselecteerde week; beoordeel deze speler op omliggende weken en bekende context.',
+                $isCurrentWeek ? 'Stuur een reminder om de weekcheck vandaag in te vullen.' : 'Neem deze ontbrekende week mee in je advies.',
+                0,
+                $weightTrend,
+            );
         }
 
         if ($checkin->pain) {
@@ -163,18 +178,101 @@ class PlayerAdviceService
             $latest?->calculated_training_load ?? 'n.v.t.',
             $this->bulkNutritionSummary($player, $latest),
             $evaluation['next_action'],
-            $latestAdvice?->body ?? $evaluation['advice'],
+            $latestAdvice?->body ?? 'Geen coachadvies geschreven.',
         );
+    }
+
+    /**
+     * @return Collection<int, Player>
+     */
+    public function playersForAnalysis(CarbonInterface|string|null $weekStartDate): Collection
+    {
+        $weekStart = $this->normalizeWeekStart($weekStartDate);
+        $weekStartDate = $weekStart->toDateString();
+
+        return Player::query()
+            ->with([
+                'settings',
+                'coachNotes' => fn ($query) => $query
+                    ->whereDate('week_start_date', '<=', $weekStartDate)
+                    ->latest()
+                    ->limit(3),
+                'checkins' => fn ($query) => $query
+                    ->whereDate('week_start_date', '<=', $weekStartDate)
+                    ->whereNotNull('submitted_at')
+                    ->latest('week_start_date')
+                    ->limit(8),
+            ])
+            ->where('active', true)
+            ->whereHas('checkins', fn ($query) => $query
+                ->whereDate('week_start_date', $weekStartDate)
+                ->whereNotNull('submitted_at'))
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function analysisMarkdownFor(Player $player, CarbonInterface|string|null $weekStartDate): string
+    {
+        $weekStart = $this->normalizeWeekStart($weekStartDate);
+        $checkins = $this->submittedCheckinsUntil($player, $weekStart);
+        $selectedCheckin = $checkins->first(fn (WeeklyCheckin $checkin): bool => $checkin->week_start_date->isSameDay($weekStart));
+
+        if (! $selectedCheckin) {
+            return '';
+        }
+
+        $evaluation = $this->evaluate($player, $selectedCheckin, $weekStart);
+        $coachNotes = $this->coachNotesUntil($player, $weekStart);
+
+        $lines = [
+            "## {$player->name}",
+            "- Programma: {$player->programName()}",
+            "- Program targets: {$this->programTargetSummary($player)}",
+            "- Adviesweek: {$weekStart->toDateString()}",
+            "- Datacheck: {$evaluation['readiness']} ({$evaluation['reason']})",
+            "- Compliance adviesweek: {$evaluation['compliance']}%",
+            '- Gewichtstrend: '.($evaluation['weight_trend'] === null ? 'n.v.t.' : number_format($evaluation['weight_trend'], 1).' kg/week'),
+            '- Historische check-ins in context: '.$checkins->count(),
+            '',
+            '### Check-ins (nieuw naar oud)',
+        ];
+
+        foreach ($checkins as $checkin) {
+            $lines[] = $this->checkinSummaryLine($player, $checkin);
+        }
+
+        if ($coachNotes->isNotEmpty()) {
+            $lines[] = '';
+            $lines[] = '### Eerder door coach geschreven';
+
+            foreach ($coachNotes as $note) {
+                $lines[] = '- '.$note->week_start_date?->toDateString().' - '.$note->title.': '.$note->body;
+            }
+        }
+
+        return implode("\n", $lines);
+    }
+
+    public function checkinHistorySummary(Player $player, CarbonInterface|string|null $weekStartDate): string
+    {
+        $weekStart = $this->normalizeWeekStart($weekStartDate);
+
+        return $this->submittedCheckinsUntil($player, $weekStart)
+            ->map(fn (WeeklyCheckin $checkin): string => $this->checkinSummaryLine($player, $checkin))
+            ->implode(' | ');
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function bulkSummary(Player $player): array
+    public function bulkSummary(Player $player, CarbonInterface|string|null $weekStartDate = null): array
     {
-        $player->loadMissing(['checkins' => fn ($query) => $query->latest('week_start_date')->limit(4)]);
-        $latest = $player->checkins->first();
-        $evaluation = $this->evaluate($player, $latest);
+        $weekStart = $this->normalizeWeekStart($weekStartDate);
+        $checkins = $this->checkinsUntil($player, $weekStart);
+        $latest = $weekStartDate === null
+            ? $checkins->first()
+            : $checkins->first(fn (WeeklyCheckin $checkin): bool => $checkin->week_start_date->isSameDay($weekStart));
+        $evaluation = $this->evaluate($player, $latest, $weekStart);
 
         return [
             'current_weight' => $latest?->weight_kg,
@@ -314,6 +412,121 @@ class PlayerAdviceService
             'no' => 'Nee (0-2 dagen)',
             default => 'n.v.t.',
         };
+    }
+
+    /**
+     * @return Collection<int, WeeklyCheckin>
+     */
+    private function checkinsUntil(Player $player, CarbonInterface $weekStart): Collection
+    {
+        if ($player->relationLoaded('checkins')) {
+            return $player->checkins
+                ->filter(fn (WeeklyCheckin $checkin): bool => $checkin->week_start_date->lte($weekStart))
+                ->sortByDesc(fn (WeeklyCheckin $checkin): int => $checkin->week_start_date->getTimestamp())
+                ->take(4)
+                ->values();
+        }
+
+        return $player->checkins()
+            ->whereDate('week_start_date', '<=', $weekStart->toDateString())
+            ->latest('week_start_date')
+            ->limit(4)
+            ->get();
+    }
+
+    public function normalizeWeekStart(CarbonInterface|string|null $weekStartDate): CarbonInterface
+    {
+        if ($weekStartDate instanceof CarbonInterface) {
+            return $weekStartDate->copy()->startOfWeek();
+        }
+
+        if (is_string($weekStartDate) && preg_match('/^(?<year>\d{4})-W(?<week>\d{2})$/', $weekStartDate, $matches) === 1) {
+            return now()->setISODate((int) $matches['year'], (int) $matches['week'])->startOfWeek();
+        }
+
+        return Carbon::parse($weekStartDate ?? now())->startOfWeek();
+    }
+
+    /**
+     * @return Collection<int, WeeklyCheckin>
+     */
+    private function submittedCheckinsUntil(Player $player, CarbonInterface $weekStart): Collection
+    {
+        if ($player->relationLoaded('checkins')) {
+            return $player->checkins
+                ->filter(fn (WeeklyCheckin $checkin): bool => $checkin->submitted_at !== null && $checkin->week_start_date->lte($weekStart))
+                ->sortByDesc(fn (WeeklyCheckin $checkin): int => $checkin->week_start_date->getTimestamp())
+                ->values();
+        }
+
+        return $player->checkins()
+            ->whereNotNull('submitted_at')
+            ->whereDate('week_start_date', '<=', $weekStart->toDateString())
+            ->latest('week_start_date')
+            ->limit(8)
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, CoachNote>
+     */
+    private function coachNotesUntil(Player $player, CarbonInterface $weekStart): Collection
+    {
+        if ($player->relationLoaded('coachNotes')) {
+            return $player->coachNotes
+                ->filter(fn (CoachNote $note): bool => $note->week_start_date === null || $note->week_start_date->lte($weekStart))
+                ->sortByDesc(fn (CoachNote $note): int => $note->created_at?->getTimestamp() ?? 0)
+                ->values();
+        }
+
+        return $player->coachNotes()
+            ->whereDate('week_start_date', '<=', $weekStart->toDateString())
+            ->latest()
+            ->limit(3)
+            ->get();
+    }
+
+    private function checkinSummaryLine(Player $player, WeeklyCheckin $checkin): string
+    {
+        $parts = [
+            'week '.$checkin->week_start_date->toDateString(),
+            $checkin->strength_sessions.' kracht',
+            $checkin->conditioning_sessions.' conditie',
+            $checkin->mobility_sessions.' mobiliteit',
+            'rustdag '.$this->yesNoUnknown($checkin->had_full_rest_day),
+            'slaap '.($checkin->sleep_avg_hours ?? 'n.v.t.'),
+            'energie '.($checkin->energy_score ?? 'n.v.t.'),
+            'spierpijn '.($checkin->soreness_score ?? 'n.v.t.'),
+            'pijn '.($checkin->pain ? 'ja'.($checkin->pain_location ? ' - '.$checkin->pain_location : '') : 'nee'),
+            'load '.($checkin->calculated_training_load ?? 'n.v.t.'),
+        ];
+
+        if ($player->isMuscleGain()) {
+            $parts[] = 'gewicht '.($checkin->weight_kg ?? 'n.v.t.');
+            $parts[] = 'kcal '.($checkin->kcal_avg ?? 'n.v.t.');
+            $parts[] = 'eiwit '.$this->proteinStatusLabel($checkin->protein_status);
+            $parts[] = 'eiwitdagen '.($checkin->protein_target_days === null ? 'n.v.t.' : $checkin->protein_target_days.'/7');
+            $parts[] = 'eetlust '.($checkin->appetite_score ?? 'n.v.t.');
+        }
+
+        if ($checkin->missed_target_reason) {
+            $parts[] = 'reden gemist '.$checkin->missed_target_reason.($checkin->missed_target_reason_other ? ' - '.$checkin->missed_target_reason_other : '');
+        }
+
+        if ($checkin->notes) {
+            $parts[] = 'speler-opmerking: '.$checkin->notes;
+        }
+
+        if ($checkin->protein_notes) {
+            $parts[] = 'eiwit-opmerking: '.$checkin->protein_notes;
+        }
+
+        return '- '.implode('; ', $parts).'.';
+    }
+
+    private function yesNoUnknown(?bool $value): string
+    {
+        return $value === null ? 'n.v.t.' : ($value ? 'ja' : 'nee');
     }
 
     private function trainingCompliance(Player $player, WeeklyCheckin $checkin): int
