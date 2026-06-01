@@ -60,7 +60,7 @@ test('coach krijgt een mail wanneer speler de weekcheck verstuurt', function () 
     expect($checkin->submitted_at)->not->toBeNull()
         ->and($checkin->coach_notified_at)->not->toBeNull();
 
-    Mail::assertSent(PlayerCheckinSubmitted::class, function (PlayerCheckinSubmitted $mail) use ($checkin, $coach): bool {
+    Mail::assertQueued(PlayerCheckinSubmitted::class, function (PlayerCheckinSubmitted $mail) use ($checkin, $coach): bool {
         return $mail->hasTo($coach->email)
             && $mail->weeklyCheckin->is($checkin)
             && $mail->coach->is($coach);
@@ -82,7 +82,7 @@ test('autosave stuurt nog geen coachmail', function () {
     expect($checkin->submitted_at)->toBeNull()
         ->and($checkin->coach_notified_at)->toBeNull();
 
-    Mail::assertNothingSent();
+    Mail::assertNothingOutgoing();
 });
 
 test('coachmail wordt maar een keer per checkin verstuurd', function () {
@@ -98,7 +98,7 @@ test('coachmail wordt maar een keer per checkin verstuurd', function () {
 
     expect($checkin->coach_notified_at)->not->toBeNull();
 
-    Mail::assertSentCount(1);
+    Mail::assertQueuedCount(1);
 });
 
 test('coachmail bevat checkin summary en links', function () {

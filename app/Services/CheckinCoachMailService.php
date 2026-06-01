@@ -28,7 +28,7 @@ class CheckinCoachMailService
         }
 
         $coaches->each(function (User $coach) use ($weeklyCheckin): void {
-            Mail::to($coach->email)->send(new PlayerCheckinSubmitted($weeklyCheckin, $coach));
+            Mail::to($coach->email)->queue(new PlayerCheckinSubmitted($weeklyCheckin, $coach));
         });
 
         $weeklyCheckin->forceFill(['coach_notified_at' => now()])->save();

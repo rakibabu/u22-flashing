@@ -3,6 +3,9 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::command('queue:prune-failed --hours=168')->dailyAt('03:00');
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
