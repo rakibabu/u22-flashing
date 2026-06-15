@@ -562,16 +562,6 @@
                         <flux:textarea wire:model.live.debounce.750ms="form.playbook_focus" label="Welke call/play heb je geleerd of herhaald?" rows="3" />
                         @error('form.playbook_focus') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                     </div>
-
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <div data-checkin-field="attendance_notes">
-                            <flux:textarea wire:model.live.debounce.750ms="form.attendance_notes" label="Aanwezig bij welke teammomenten/pickups?" rows="3" />
-                        </div>
-
-                        <div data-checkin-field="absence_communication_notes">
-                            <flux:textarea wire:model.live.debounce.750ms="form.absence_communication_notes" label="Afwezigheid vooraf gemeld en alternatief?" rows="3" />
-                        </div>
-                    </div>
                 </div>
             @endif
 

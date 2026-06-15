@@ -41,8 +41,6 @@ class Checkin extends Component
         'defence_sessions' => null,
         'playbook_calls_learned' => null,
         'playbook_focus' => null,
-        'attendance_notes' => null,
-        'absence_communication_notes' => null,
         'highest_session_rpe' => null,
         'calculated_training_load' => null,
         'missed_target_reason' => null,
@@ -268,8 +266,6 @@ class Checkin extends Component
             'form.defence_sessions' => ['nullable', 'integer', 'min:0', 'max:7'],
             'form.playbook_calls_learned' => ['nullable', 'integer', 'min:0', 'max:10'],
             'form.playbook_focus' => ['nullable', 'string', 'max:2000'],
-            'form.attendance_notes' => ['nullable', 'string', 'max:2000'],
-            'form.absence_communication_notes' => ['nullable', 'string', 'max:2000'],
             'form.highest_session_rpe' => ['nullable', 'integer', 'between:1,10'],
             'form.calculated_training_load' => ['nullable', 'integer', 'min:0'],
             'form.missed_target_reason' => ['nullable', Rule::in($this->missedTargetReasons())],
@@ -515,8 +511,6 @@ class Checkin extends Component
                     'form.defence_sessions',
                     'form.playbook_calls_learned',
                     'form.playbook_focus',
-                    'form.attendance_notes',
-                    'form.absence_communication_notes',
                 ] : []),
                 'form.pickup_monday',
                 'form.pickup_thursday',
@@ -620,8 +614,6 @@ class Checkin extends Component
             'defence_sessions',
             'playbook_calls_learned',
             'playbook_focus',
-            'attendance_notes',
-            'absence_communication_notes',
         ], true)) {
             return 1;
         }
@@ -693,8 +685,6 @@ class Checkin extends Component
             'form.defence_sessions' => 'defence/first-step blokken',
             'form.playbook_calls_learned' => 'calls geleerd',
             'form.playbook_focus' => 'playbook focus',
-            'form.attendance_notes' => 'aanwezigheid',
-            'form.absence_communication_notes' => 'communicatie bij afwezigheid',
             'form.sleep_avg_hours' => 'slaap',
             'form.energy_score' => 'energie',
             'form.soreness_score' => 'spierpijn',
@@ -742,6 +732,9 @@ class Checkin extends Component
             $validated['protein_status'] = $this->proteinStatusFromDays($validated['protein_target_days'] ?? null) ?? ($validated['protein_status'] ?? null);
         }
 
+        $validated['attendance_notes'] = null;
+        $validated['absence_communication_notes'] = null;
+
         if (! $player->isGuardDevelopment()) {
             $validated['handle_sessions'] = null;
             $validated['handle_minutes'] = null;
@@ -751,8 +744,6 @@ class Checkin extends Component
             $validated['defence_sessions'] = null;
             $validated['playbook_calls_learned'] = null;
             $validated['playbook_focus'] = null;
-            $validated['attendance_notes'] = null;
-            $validated['absence_communication_notes'] = null;
         }
 
         if (! $player->isConditioning()) {

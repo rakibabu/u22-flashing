@@ -87,8 +87,6 @@ function completeCheckinFormFor(Player $player): array
             'form.defence_sessions' => 2,
             'form.playbook_calls_learned' => 1,
             'form.playbook_focus' => 'Horns entry en eerste reset.',
-            'form.attendance_notes' => 'Aanwezig bij trainingen en pickup.',
-            'form.absence_communication_notes' => 'Geen afwezigheid.',
         ];
     }
 
@@ -680,6 +678,12 @@ test('alle programma types kunnen een volledige weekcheck indienen', function (s
         ->assertSet('step', 1)
         ->assertSee('Stap 1 van '.$expectedMaxStep);
 
+    if ($player->isGuardDevelopment()) {
+        $component
+            ->assertDontSee('Aanwezig bij welke teammomenten/pickups?')
+            ->assertDontSee('Afwezigheid vooraf gemeld en alternatief?');
+    }
+
     foreach (completeCheckinFormFor($player) as $field => $value) {
         $component->set($field, $value);
     }
@@ -1235,8 +1239,6 @@ test('guard development speler bewaart handles pickups conditie en voeding', fun
         ->set('form.defence_sessions', 2)
         ->set('form.playbook_calls_learned', 1)
         ->set('form.playbook_focus', 'Horns startpositie, optie 1/2 en reset.')
-        ->set('form.attendance_notes', 'Pickup maandag en donderdag aanwezig.')
-        ->set('form.absence_communication_notes', 'Geen afwezigheid.')
         ->set('form.total_training_minutes', 180)
         ->set('form.highest_session_rpe', 8)
         ->set('form.had_full_rest_day', true)
@@ -1261,8 +1263,8 @@ test('guard development speler bewaart handles pickups conditie en voeding', fun
         ->and($checkin->defence_sessions)->toBe(2)
         ->and($checkin->playbook_calls_learned)->toBe(1)
         ->and($checkin->playbook_focus)->toContain('Horns')
-        ->and($checkin->attendance_notes)->toContain('Pickup maandag')
-        ->and($checkin->absence_communication_notes)->toBe('Geen afwezigheid.')
+        ->and($checkin->attendance_notes)->toBeNull()
+        ->and($checkin->absence_communication_notes)->toBeNull()
         ->and((float) $checkin->weight_kg)->toBe(70.2)
         ->and($checkin->kcal_avg)->toBe(3100)
         ->and($checkin->protein_status)->toBe('yes')
