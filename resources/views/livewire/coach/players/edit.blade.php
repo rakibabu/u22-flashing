@@ -8,6 +8,9 @@
             <flux:select.option value="maintenance">Onderhoud</flux:select.option>
             <flux:select.option value="guard_development">Guard development</flux:select.option>
         </flux:select>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400">
+            Als je het programma wijzigt, worden de targets automatisch aangepast naar de standaardwaarden van het nieuwe programma.
+        </p>
         <div class="grid gap-4 sm:grid-cols-3">
             <flux:input wire:model="form.age" type="number" label="Leeftijd" />
             <flux:input wire:model="form.height_cm" type="number" label="Lengte cm" />

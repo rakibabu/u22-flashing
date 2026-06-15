@@ -4,6 +4,7 @@ use App\Livewire\Coach\AnalysisExport;
 use App\Livewire\Coach\Dashboard;
 use App\Livewire\Coach\Players\CheckinPreview;
 use App\Livewire\Coach\Players\Create;
+use App\Livewire\Coach\Players\Edit;
 use App\Livewire\Coach\Players\Index;
 use App\Livewire\Coach\Players\Show;
 use App\Livewire\Player\Checkin;
@@ -208,6 +209,73 @@ test('speler kan geen speler verwijderen', function () {
         ->assertForbidden();
 
     expect(Player::query()->whereKey($otherPlayer->id)->exists())->toBeTrue();
+});
+
+test('coach kan speler naar ander programma switchen met nieuwe standaard targets', function () {
+    $coach = coachUser();
+    $player = playerWithUser(['name' => 'Switch Speler', 'program_type' => Player::Maintenance]);
+
+    Livewire::actingAs($coach)
+        ->test(Edit::class, ['player' => $player])
+        ->assertSet('form.program_type', Player::Maintenance)
+        ->assertSee('targets automatisch aangepast')
+        ->set('form.program_type', Player::GuardDevelopment)
+        ->call('save')
+        ->assertRedirect(route('coach.players.show', $player));
+
+    $player->refresh()->load('settings');
+
+    expect($player->program_type)->toBe(Player::GuardDevelopment)
+        ->and($player->settings->handle_sessions_target_per_week)->toBe(3)
+        ->and($player->settings->handle_minutes_target_per_week)->toBe(75)
+        ->and($player->settings->pickup_target_per_week)->toBe(1)
+        ->and($player->settings->conditioning_minutes_target_per_week)->toBe(50)
+        ->and($player->settings->defence_sessions_target_per_week)->toBe(2)
+        ->and($player->settings->playbook_calls_target_per_week)->toBe(1)
+        ->and($player->settings->kcal_minimum)->toBe(2800)
+        ->and($player->settings->protein_target_min)->toBe(120)
+        ->and($player->settings->notes)->toContain('Guard development');
+
+    Livewire::actingAs($coach)
+        ->test(Edit::class, ['player' => $player])
+        ->set('form.program_type', Player::Maintenance)
+        ->call('save')
+        ->assertRedirect(route('coach.players.show', $player));
+
+    $player->refresh()->load('settings');
+
+    expect($player->program_type)->toBe(Player::Maintenance)
+        ->and($player->settings->strength_target_per_week)->toBe(2)
+        ->and($player->settings->conditioning_target_per_week)->toBe(2)
+        ->and($player->settings->handle_sessions_target_per_week)->toBeNull()
+        ->and($player->settings->handle_minutes_target_per_week)->toBeNull()
+        ->and($player->settings->pickup_target_per_week)->toBeNull()
+        ->and($player->settings->kcal_minimum)->toBeNull()
+        ->and($player->settings->protein_target_min)->toBeNull()
+        ->and($player->settings->notes)->toBeNull();
+});
+
+test('coach bewaart aangepaste targets als programma niet wijzigt', function () {
+    $player = playerWithUser(['name' => 'Custom Target Speler', 'program_type' => Player::Maintenance]);
+    $player->settings()->update([
+        'strength_target_per_week' => 4,
+        'conditioning_target_per_week' => 1,
+        'notes' => 'Bewaar deze persoonlijke targets.',
+    ]);
+
+    Livewire::actingAs(coachUser())
+        ->test(Edit::class, ['player' => $player])
+        ->set('form.name', 'Custom Target Speler Updated')
+        ->call('save')
+        ->assertRedirect(route('coach.players.show', $player));
+
+    $player->refresh()->load('settings');
+
+    expect($player->name)->toBe('Custom Target Speler Updated')
+        ->and($player->program_type)->toBe(Player::Maintenance)
+        ->and($player->settings->strength_target_per_week)->toBe(4)
+        ->and($player->settings->conditioning_target_per_week)->toBe(1)
+        ->and($player->settings->notes)->toBe('Bewaar deze persoonlijke targets.');
 });
 
 test('coach kan trainingsprogramma pdf per type uploaden', function () {

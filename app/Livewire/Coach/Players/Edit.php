@@ -3,7 +3,9 @@
 namespace App\Livewire\Coach\Players;
 
 use App\Models\Player;
+use App\Models\PlayerProgramSetting;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -22,7 +24,7 @@ class Edit extends Component
         $this->form = $player->only(['name', 'program_type', 'age', 'height_cm', 'start_weight_kg', 'target_weight_kg', 'long_term_target_weight_kg', 'notes']);
     }
 
-    public function save()
+    public function save(): mixed
     {
         $validated = $this->validate([
             'form.name' => ['required', 'string', 'max:255'],
@@ -35,7 +37,18 @@ class Edit extends Component
             'form.notes' => ['nullable', 'string', 'max:5000'],
         ]);
 
-        $this->player->update($validated['form']);
+        $programChanged = $this->player->program_type !== $validated['form']['program_type'];
+
+        DB::transaction(function () use ($programChanged, $validated): void {
+            $this->player->update($validated['form']);
+
+            if ($programChanged) {
+                $this->player->settings()->updateOrCreate(
+                    ['player_id' => $this->player->id],
+                    PlayerProgramSetting::defaultsForProgram($this->player->program_type),
+                );
+            }
+        });
 
         return redirect()->route('coach.players.show', $this->player);
     }
