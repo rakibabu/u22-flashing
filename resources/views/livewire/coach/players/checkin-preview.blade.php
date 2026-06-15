@@ -58,13 +58,46 @@
             </div>
         </div>
 
-        @if ($player->isMuscleGain())
+        @if ($player->isGuardDevelopment())
+            <div class="u22-target-divider"></div>
+
+            <div class="u22-target-group">
+                <div class="u22-target-group-head">
+                    <p>Guard development</p>
+                    <span>Weektargets</span>
+                </div>
+
+                <div class="u22-target-grid">
+                    <div class="u22-target-chip">
+                        <span>Handles</span>
+                        <strong>{{ $player->settings?->handle_minutes_target_per_week ?? 'n.v.t.' }}<small>min</small></strong>
+                    </div>
+
+                    <div class="u22-target-chip">
+                        <span>Pickups</span>
+                        <strong>{{ $player->settings?->pickup_target_per_week ?? 'n.v.t.' }}<small>x</small></strong>
+                    </div>
+
+                    <div class="u22-target-chip">
+                        <span>Defence</span>
+                        <strong>{{ $player->settings?->defence_sessions_target_per_week ?? 'n.v.t.' }}<small>x</small></strong>
+                    </div>
+
+                    <div class="u22-target-chip">
+                        <span>Playbook</span>
+                        <strong>{{ $player->settings?->playbook_calls_target_per_week ?? 'n.v.t.' }}<small>x</small></strong>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if ($player->tracksNutrition())
             <div class="u22-target-divider"></div>
 
             <div class="u22-target-group">
                 <div class="u22-target-group-head">
                     <p>Voeding</p>
-                    <span>Spiermassa</span>
+                    <span>{{ $player->isMuscleGain() ? 'Spiermassa' : 'Lean bulk-light' }}</span>
                 </div>
 
                 <div class="u22-target-grid">

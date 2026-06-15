@@ -73,6 +73,27 @@ class PlayerCheckinSubmitted extends Mailable implements ShouldQueue
             $rows['Waarom niet gelukt'] = trim($checkin->missed_target_reason.' '.($checkin->missed_target_reason_other ? '- '.$checkin->missed_target_reason_other : ''));
         }
 
+        if ($checkin->player->isGuardDevelopment()) {
+            $rows['Guard werk'] = "{$this->value($checkin->handle_minutes)} handle-minuten, {$this->value($checkin->handle_sessions)} handle/passing sessies, {$this->value($checkin->pickup_sessions)} pickups, {$this->value($checkin->conditioning_minutes)} conditieminuten";
+            $rows['Guard defence/playbook'] = "{$this->value($checkin->defence_sessions)} defence-blokken, {$this->value($checkin->playbook_calls_learned)} calls";
+
+            if ($checkin->handles_worked_on) {
+                $rows['Handles geoefend'] = $checkin->handles_worked_on;
+            }
+
+            if ($checkin->playbook_focus) {
+                $rows['Playbook focus'] = $checkin->playbook_focus;
+            }
+
+            if ($checkin->attendance_notes) {
+                $rows['Aanwezigheid'] = $checkin->attendance_notes;
+            }
+
+            if ($checkin->absence_communication_notes) {
+                $rows['Communicatie'] = $checkin->absence_communication_notes;
+            }
+        }
+
         if ($checkin->notes) {
             $rows['Opmerking speler'] = $checkin->notes;
         }
@@ -87,7 +108,7 @@ class PlayerCheckinSubmitted extends Mailable implements ShouldQueue
     {
         $checkin = $this->weeklyCheckin;
 
-        if (! $checkin->player->isMuscleGain()) {
+        if (! $checkin->player->tracksNutrition()) {
             return [];
         }
 

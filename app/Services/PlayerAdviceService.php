@@ -96,6 +96,46 @@ class PlayerAdviceService
             }
         }
 
+        if ($player->isGuardDevelopment()) {
+            $handleMinutesTarget = (int) ($settings?->handle_minutes_target_per_week ?? 0);
+
+            if ($handleMinutesTarget > 0 && (int) ($checkin->handle_minutes ?? 0) < $handleMinutesTarget) {
+                return $this->result($player, 'orange', 'Te weinig handle-minuten', 'Guardontwikkeling vraagt wekelijkse balreps. Plan 3 korte handle/passing sessies en noteer precies welke moves je traint.', 'Plan minimaal '.$handleMinutesTarget.' handle-minuten en 3 handle/passing sessies.', $compliance, $weightTrend);
+            }
+
+            if ($settings?->handle_sessions_target_per_week && (int) ($checkin->handle_sessions ?? 0) < $settings->handle_sessions_target_per_week) {
+                return $this->result($player, 'orange', 'Te weinig handle/passing sessies', 'Losse minuten zijn goed, maar je hebt herhaalde sessies nodig: handles, druk, passing en playcall kort maar scherp.', 'Plan deze week '.$settings->handle_sessions_target_per_week.' handle/passing sessies.', $compliance, $weightTrend);
+            }
+
+            if (! $checkin->handles_worked_on) {
+                return $this->result($player, 'orange', 'Handles niet gespecificeerd', 'Noteer welke handles en passing onder druk je hebt gedaan, anders kunnen we niet zien of je gericht traint.', 'Vul bij de volgende check-in concreet in welke handle-drills je deed.', $compliance, $weightTrend);
+            }
+
+            if ($settings?->pickup_target_per_week && (int) ($checkin->pickup_sessions ?? 0) < $settings->pickup_target_per_week) {
+                return $this->result($player, 'orange', 'Te weinig pickups', 'Je hebt live reps nodig om druk, fouten, feedback en opnieuw proberen te krijgen.', 'Plan minimaal '.$settings->pickup_target_per_week.' pickup of teammoment met live guard-reps.', $compliance, $weightTrend);
+            }
+
+            if ($settings?->conditioning_minutes_target_per_week && (int) ($checkin->conditioning_minutes ?? 0) < $settings->conditioning_minutes_target_per_week) {
+                return $this->result($player, 'orange', 'Te weinig conditieminuten', 'Als je op de 1 wilt spelen moet je tempo aankunnen zonder conditioneel in te storten.', 'Plan minimaal '.$settings->conditioning_minutes_target_per_week.' gerichte conditieminuten of pickup-tempo.', $compliance, $weightTrend);
+            }
+
+            if ($settings?->defence_sessions_target_per_week && (int) ($checkin->defence_sessions ?? 0) < $settings->defence_sessions_target_per_week) {
+                return $this->result($player, 'orange', 'Te weinig defence/first-step werk', 'Defence is een directe route naar minuten. Werk aan eerste stap, no middle en contain.', 'Plan '.$settings->defence_sessions_target_per_week.' korte defence/first-step blokken.', $compliance, $weightTrend);
+            }
+
+            if ($settings?->playbook_calls_target_per_week && (int) ($checkin->playbook_calls_learned ?? 0) < $settings->playbook_calls_target_per_week) {
+                return $this->result($player, 'orange', 'Te weinig playbook/calls', 'Als guard moet je de play hard callen, starten en bewaken. Elke week minimaal 1 call leren of herhalen.', 'Leer of herhaal minimaal '.$settings->playbook_calls_target_per_week.' call en noteer startpositie, optie 1/2 en reset.', $compliance, $weightTrend);
+            }
+
+            if (! $checkin->playbook_focus) {
+                return $this->result($player, 'orange', 'Playbook-focus ontbreekt', 'Zonder concrete call/play is niet zichtbaar of je systemen leert lopen zoals bedoeld.', 'Vul concreet in welke call of play je hebt geleerd of herhaald.', $compliance, $weightTrend);
+            }
+
+            if (in_array($checkin->protein_status, ['partial', 'no'], true)) {
+                return $this->result($player, 'orange', 'Eiwitdoel niet volledig gehaald', 'Lean bulk-light blijft ondersteunend: sterker worden zonder traag te worden. '.$this->proteinDetailSummary($checkin), 'Plan per dag je eiwitmomenten en check rond 20:00 wat nog openstaat.', $compliance, $weightTrend);
+            }
+        }
+
         if ($settings && $checkin->strength_sessions < $settings->strength_target_per_week) {
             return $this->result(
                 player: $player,
@@ -149,8 +189,10 @@ class PlayerAdviceService
         }
 
         $greenAdvice = $player->isMuscleGain()
-            ? 'Goed bezig. Houd 3x kracht, maandagpickup, 3000+ kcal, 120-130g eiwit en je weekgemiddelde gewicht vast.'
-            : 'Goed bezig. Houd 2x kracht, 2x conditie/pickup en 3x preventie vast en blijf pijn of zware spierpijn eerlijk melden.';
+            ? 'Goed bezig. Houd 3x kracht, maandagpickup, optionele donderdagpickup als die past, 3000+ kcal, 120-130g eiwit en je weekgemiddelde gewicht vast.'
+            : ($player->isGuardDevelopment()
+                ? 'Goed bezig. Houd je aanwezigheid, handle-minuten, pickups, kracht/conditie, defence en playbookritme vast.'
+                : 'Goed bezig. Houd 2x kracht, 2x conditie/pickup en 3x preventie vast en blijf pijn of zware spierpijn eerlijk melden.');
 
         return $this->result($player, 'green', 'Op schema', $greenAdvice, 'Geen grote bijsturing nodig; ritme vasthouden.', $compliance, $weightTrend);
     }
@@ -284,6 +326,16 @@ class PlayerAdviceService
             'protein_notes' => $latest?->protein_notes,
             'strength_sessions' => $latest?->strength_sessions,
             'pickup_monday' => $latest?->pickup_monday,
+            'handle_sessions' => $latest?->handle_sessions,
+            'handle_minutes' => $latest?->handle_minutes,
+            'handles_worked_on' => $latest?->handles_worked_on,
+            'pickup_sessions' => $latest?->pickup_sessions,
+            'conditioning_minutes' => $latest?->conditioning_minutes,
+            'defence_sessions' => $latest?->defence_sessions,
+            'playbook_calls_learned' => $latest?->playbook_calls_learned,
+            'playbook_focus' => $latest?->playbook_focus,
+            'attendance_notes' => $latest?->attendance_notes,
+            'absence_communication_notes' => $latest?->absence_communication_notes,
             'appetite_score' => $latest?->appetite_score,
             'kcal_advice' => $evaluation['advice'],
             'target_weight' => $player->target_weight_kg,
@@ -391,7 +443,7 @@ class PlayerAdviceService
 
     private function bulkNutritionSummary(Player $player, ?WeeklyCheckin $checkin): string
     {
-        if (! $player->isMuscleGain()) {
+        if (! $player->tracksNutrition()) {
             return 'n.v.t.';
         }
 
@@ -501,12 +553,37 @@ class PlayerAdviceService
             'load '.($checkin->calculated_training_load ?? 'n.v.t.'),
         ];
 
-        if ($player->isMuscleGain()) {
+        if ($player->tracksNutrition()) {
             $parts[] = 'gewicht '.($checkin->weight_kg ?? 'n.v.t.');
             $parts[] = 'kcal '.($checkin->kcal_avg ?? 'n.v.t.');
             $parts[] = 'eiwit '.$this->proteinStatusLabel($checkin->protein_status);
             $parts[] = 'eiwitdagen '.($checkin->protein_target_days === null ? 'n.v.t.' : $checkin->protein_target_days.'/7');
             $parts[] = 'eetlust '.($checkin->appetite_score ?? 'n.v.t.');
+        }
+
+        if ($player->isGuardDevelopment()) {
+            $parts[] = 'handles '.($checkin->handle_minutes ?? 'n.v.t.').' min';
+            $parts[] = 'handle-sessies '.($checkin->handle_sessions ?? 'n.v.t.');
+            $parts[] = 'pickups '.($checkin->pickup_sessions ?? 'n.v.t.');
+            $parts[] = 'conditieminuten '.($checkin->conditioning_minutes ?? 'n.v.t.');
+            $parts[] = 'defence '.($checkin->defence_sessions ?? 'n.v.t.');
+            $parts[] = 'calls '.($checkin->playbook_calls_learned ?? 'n.v.t.');
+
+            if ($checkin->handles_worked_on) {
+                $parts[] = 'handles geoefend: '.$checkin->handles_worked_on;
+            }
+
+            if ($checkin->playbook_focus) {
+                $parts[] = 'playbook: '.$checkin->playbook_focus;
+            }
+
+            if ($checkin->attendance_notes) {
+                $parts[] = 'aanwezigheid: '.$checkin->attendance_notes;
+            }
+
+            if ($checkin->absence_communication_notes) {
+                $parts[] = 'communicatie: '.$checkin->absence_communication_notes;
+            }
         }
 
         if ($checkin->missed_target_reason) {
@@ -542,6 +619,28 @@ class PlayerAdviceService
             + min($settings->conditioning_target_per_week, $checkin->conditioning_sessions)
             + min($settings->mobility_target_per_week, $checkin->mobility_sessions);
 
+        if ($player->isGuardDevelopment()) {
+            $guardTargets = [
+                'handle_sessions_target_per_week' => $checkin->handle_sessions,
+                'handle_minutes_target_per_week' => $checkin->handle_minutes,
+                'pickup_target_per_week' => $checkin->pickup_sessions,
+                'conditioning_minutes_target_per_week' => $checkin->conditioning_minutes,
+                'defence_sessions_target_per_week' => $checkin->defence_sessions,
+                'playbook_calls_target_per_week' => $checkin->playbook_calls_learned,
+            ];
+
+            foreach ($guardTargets as $targetKey => $value) {
+                $guardTarget = (int) ($settings->{$targetKey} ?? 0);
+
+                if ($guardTarget === 0) {
+                    continue;
+                }
+
+                $target += $guardTarget;
+                $done += min($guardTarget, (int) ($value ?? 0));
+            }
+        }
+
         return (int) round(($done / $target) * 100);
     }
 
@@ -576,7 +675,11 @@ class PlayerAdviceService
     private function programTargetSummary(Player $player): string
     {
         if ($player->isMuscleGain()) {
-            return '3x kracht, maandagpickup, geen donderdagpickup, 3000 kcal minimum, gymdag 3300-3400 kcal, pickupdag 3600 kcal, 120-130g eiwit, 66-68 kg op 17 augustus is goed en 68-70 kg stretch.';
+            return '3x kracht, maandagpickup, donderdagpickup optioneel, 3000 kcal minimum, gymdag 3300-3400 kcal, pickupdag 3600 kcal, 120-130g eiwit, 66-68 kg op 17 augustus is goed en 68-70 kg stretch.';
+        }
+
+        if ($player->isGuardDevelopment()) {
+            return '3x handles/passing, 75+ handle-minuten, 2x kracht, 2x conditie/pickup, 50+ conditieminuten, 2x defence/first-step, 1 call/play per week, plus gewicht/kcal/eiwit als lean bulk-light.';
         }
 
         return '2x kracht, 2x conditie/pickup, 3x 8 minuten preventie en minimaal 1 volledige rustdag.';

@@ -13,11 +13,13 @@ use App\Models\Invite;
 use App\Models\Player;
 use App\Models\ProgramPhase;
 use App\Models\ProgramTemplate;
+use App\Models\TestResult;
 use App\Models\User;
 use App\Models\WeeklyCheckin;
 use App\Services\PlayerAdviceService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -42,6 +44,54 @@ function playerWithUser(array $playerAttributes = []): Player
     ]);
 
     return $player;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function completeCheckinFormFor(Player $player): array
+{
+    $form = [
+        'form.strength_sessions' => $player->isMuscleGain() ? 3 : 2,
+        'form.conditioning_sessions' => $player->isMuscleGain() ? 1 : 2,
+        'form.mobility_sessions' => 3,
+        'form.pickup_monday' => true,
+        'form.had_full_rest_day' => true,
+        'form.total_training_minutes' => 120,
+        'form.highest_session_rpe' => 6,
+        'form.sleep_avg_hours' => 7.5,
+        'form.energy_score' => 8,
+        'form.soreness_score' => 3,
+        'form.notes' => 'Volledige deploy-check voor dit programma.',
+    ];
+
+    if ($player->tracksNutrition()) {
+        $form += [
+            'form.weight_kg' => $player->isGuardDevelopment() ? 70.2 : 61.4,
+            'form.kcal_avg' => $player->isGuardDevelopment() ? 3100 : 3300,
+            'form.protein_target_days' => 7,
+            'form.appetite_score' => 7,
+            'form.used_mijn_eetmeter' => true,
+        ];
+    }
+
+    if ($player->isGuardDevelopment()) {
+        $form += [
+            'form.handle_sessions' => 3,
+            'form.handle_minutes' => 90,
+            'form.handles_worked_on' => 'Pound, retreat, cross, pressure passing.',
+            'form.pickup_sessions' => 2,
+            'form.pickup_thursday' => true,
+            'form.conditioning_minutes' => 60,
+            'form.defence_sessions' => 2,
+            'form.playbook_calls_learned' => 1,
+            'form.playbook_focus' => 'Horns entry en eerste reset.',
+            'form.attendance_notes' => 'Aanwezig bij trainingen en pickup.',
+            'form.absence_communication_notes' => 'Geen afwezigheid.',
+        ];
+    }
+
+    return $form;
 }
 
 test('coach kan speler aanmaken', function () {
@@ -85,6 +135,81 @@ test('coach maakt muscle gain speler aan met persoonlijke bulk defaults', functi
         ->and($player->settings->notes)->toContain('3x kracht');
 });
 
+test('coach maakt guard development speler aan met jos defaults', function () {
+    Livewire::actingAs(coachUser())
+        ->test(Create::class)
+        ->set('name', 'Jos Guard')
+        ->set('program_type', Player::GuardDevelopment)
+        ->call('save')
+        ->assertRedirect();
+
+    $player = Player::query()->where('name', 'Jos Guard')->with('settings')->firstOrFail();
+
+    expect($player->programName())->toBe('Guard development')
+        ->and($player->settings->strength_target_per_week)->toBe(2)
+        ->and($player->settings->conditioning_target_per_week)->toBe(2)
+        ->and($player->settings->handle_sessions_target_per_week)->toBe(3)
+        ->and($player->settings->handle_minutes_target_per_week)->toBe(75)
+        ->and($player->settings->pickup_target_per_week)->toBe(1)
+        ->and($player->settings->conditioning_minutes_target_per_week)->toBe(50)
+        ->and($player->settings->defence_sessions_target_per_week)->toBe(2)
+        ->and($player->settings->playbook_calls_target_per_week)->toBe(1)
+        ->and($player->settings->kcal_minimum)->toBe(2800)
+        ->and($player->settings->protein_target_min)->toBe(120)
+        ->and($player->settings->notes)->toContain('Guard development');
+});
+
+test('coach kan speler verwijderen met gekoppelde spelerdata', function () {
+    $coach = coachUser();
+    $player = playerWithUser(['name' => 'Te Verwijderen Speler']);
+    $userId = $player->user_id;
+    [$invite] = Invite::createForPlayer($player);
+
+    $checkin = WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => now()->startOfWeek()->toDateString(),
+    ]);
+    $testResult = TestResult::query()->create([
+        'player_id' => $player->id,
+        'test_date' => now()->toDateString(),
+    ]);
+    $coachNote = CoachNote::query()->create([
+        'player_id' => $player->id,
+        'coach_user_id' => $coach->id,
+        'title' => 'Coachnotitie',
+        'body' => 'Deze notitie hoort bij de speler.',
+    ]);
+    $settingId = $player->settings->id;
+
+    Livewire::actingAs($coach)
+        ->test(Index::class)
+        ->assertSee('Te Verwijderen Speler')
+        ->assertSee('Verwijder')
+        ->call('deletePlayer', $player->id)
+        ->assertDispatched('player-deleted')
+        ->assertDontSee('Te Verwijderen Speler');
+
+    expect(Player::query()->whereKey($player->id)->exists())->toBeFalse()
+        ->and(WeeklyCheckin::query()->whereKey($checkin->id)->exists())->toBeFalse()
+        ->and(Invite::query()->whereKey($invite->id)->exists())->toBeFalse()
+        ->and(TestResult::query()->whereKey($testResult->id)->exists())->toBeFalse()
+        ->and(CoachNote::query()->whereKey($coachNote->id)->exists())->toBeFalse()
+        ->and(DB::table('player_program_settings')->whereKey($settingId)->exists())->toBeFalse()
+        ->and(User::query()->whereKey($userId)->exists())->toBeTrue();
+});
+
+test('speler kan geen speler verwijderen', function () {
+    $ownPlayer = playerWithUser(['name' => 'Eigen Speler']);
+    $otherPlayer = playerWithUser(['name' => 'Andere Speler']);
+
+    Livewire::actingAs($ownPlayer->user)
+        ->test(Index::class)
+        ->call('deletePlayer', $otherPlayer->id)
+        ->assertForbidden();
+
+    expect(Player::query()->whereKey($otherPlayer->id)->exists())->toBeTrue();
+});
+
 test('coach kan trainingsprogramma pdf per type uploaden', function () {
     Storage::fake('local');
     $coach = coachUser();
@@ -119,12 +244,14 @@ test('coach kan ontbrekende standaard programma templates aanmaken', function ()
         ->assertSet('programTemplatesCreated', true)
         ->assertSee('Trainingstype A: Conditie')
         ->assertSee('Trainingstype B: Bulk, kracht en spiermassa')
-        ->assertSee('Trainingstype C: Conditie en kracht onderhoud');
+        ->assertSee('Trainingstype C: Conditie en kracht onderhoud')
+        ->assertSee('Trainingstype D: Guard development');
 
-    expect(ProgramTemplate::query()->count())->toBe(3)
+    expect(ProgramTemplate::query()->count())->toBe(4)
         ->and(ProgramTemplate::query()->where('type', Player::Conditioning)->exists())->toBeTrue()
         ->and(ProgramTemplate::query()->where('type', Player::MuscleGain)->exists())->toBeTrue()
-        ->and(ProgramTemplate::query()->where('type', Player::Maintenance)->exists())->toBeTrue();
+        ->and(ProgramTemplate::query()->where('type', Player::Maintenance)->exists())->toBeTrue()
+        ->and(ProgramTemplate::query()->where('type', Player::GuardDevelopment)->exists())->toBeTrue();
 });
 
 test('invite-link werkt een keer en speler kan wachtwoord instellen', function () {
@@ -208,6 +335,35 @@ test('coach kan een volledige check-in bekijken', function () {
         ->assertSee('Goede week, benen waren fris.');
 });
 
+test('coach check-in detail berekent compliance voor de check-in week', function () {
+    $this->travelTo(Carbon::parse('2026-06-08 17:04'));
+
+    $player = playerWithUser(['name' => 'Vorige Week Speler']);
+    $checkin = WeeklyCheckin::query()->create([
+        'player_id' => $player->id,
+        'week_start_date' => Carbon::parse('2026-06-01')->toDateString(),
+        'strength_sessions' => 2,
+        'conditioning_sessions' => 2,
+        'mobility_sessions' => 3,
+        'had_full_rest_day' => true,
+        'sleep_avg_hours' => 7.5,
+        'energy_score' => 8,
+        'soreness_score' => 3,
+        'pain' => false,
+        'total_training_minutes' => 120,
+        'highest_session_rpe' => 7,
+        'calculated_training_load' => 840,
+        'submitted_at' => Carbon::parse('2026-06-08 09:28'),
+    ]);
+
+    $this->actingAs(coachUser())->get(route('coach.checkins.show', $checkin))
+        ->assertOk()
+        ->assertSee('Check-in Vorige Week Speler')
+        ->assertSee('100%')
+        ->assertSee('Op schema')
+        ->assertDontSee('Check-in mist deze week');
+});
+
 test('coach ziet weekchecks van alle spelers en weken', function () {
     $first = playerWithUser(['name' => 'Eerste Weekspeler']);
     $second = playerWithUser(['name' => 'Tweede Weekspeler']);
@@ -287,6 +443,9 @@ test('coach kan speler weekcheck scherm previewen zonder speleraccount te maken'
         ->assertSee('Training')
         ->assertSee('Aantal keer kracht')
         ->assertSee('Aantal keer extra conditie')
+        ->assertSee('Pickup donderdag')
+        ->assertSee('Alleen invullen als je meedeed')
+        ->assertDontSee('Donderdagpickup staat niet in jouw spiermassa-plan')
         ->assertSee('u22-checkin-draft:preview:'.$player->id, false)
         ->assertSee('restoreDraft()', false)
         ->assertDontSee('Gemiddelde kcal per dag');
@@ -296,6 +455,8 @@ test('coach kan speler weekcheck scherm previewen zonder speleraccount te maken'
         ->assertSet('form.strength_sessions', null)
         ->assertSet('form.conditioning_sessions', null)
         ->assertSet('form.mobility_sessions', null)
+        ->assertSee('Pickup donderdag')
+        ->assertDontSee('Donderdagpickup staat niet in jouw spiermassa-plan')
         ->assertSee('u22-choice-grid-count', false)
         ->assertSee('4+')
         ->call('nextStep')
@@ -416,6 +577,123 @@ test('speler kan coach check-in detail niet bekijken', function () {
 
     $this->actingAs($player->user)->get(route('coach.checkins.show', $checkin))
         ->assertForbidden();
+});
+
+test('alle programma types kunnen een volledige weekcheck indienen', function (string $programType, int $expectedMaxStep) {
+    $player = playerWithUser(['program_type' => $programType]);
+
+    if ($player->isMuscleGain()) {
+        $player->settings()->update([
+            'strength_target_per_week' => 3,
+            'conditioning_target_per_week' => 1,
+            'mobility_target_per_week' => 3,
+            'kcal_minimum' => 3000,
+            'protein_target_min' => 120,
+            'protein_target_max' => 130,
+        ]);
+    }
+
+    if ($player->isGuardDevelopment()) {
+        $player->settings()->update([
+            'handle_sessions_target_per_week' => 3,
+            'handle_minutes_target_per_week' => 75,
+            'pickup_target_per_week' => 1,
+            'conditioning_minutes_target_per_week' => 50,
+            'defence_sessions_target_per_week' => 2,
+            'playbook_calls_target_per_week' => 1,
+            'kcal_minimum' => 2800,
+            'protein_target_min' => 120,
+            'protein_target_max' => 130,
+        ]);
+    }
+
+    $component = Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->assertSet('step', 1)
+        ->assertSee('Stap 1 van '.$expectedMaxStep);
+
+    foreach (completeCheckinFormFor($player) as $field => $value) {
+        $component->set($field, $value);
+    }
+
+    $component
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertSet('saved', true)
+        ->assertSee('Bedankt, je check-in is opgeslagen.');
+
+    $checkin = $player->checkins()->firstOrFail();
+
+    expect($checkin->submitted_at)->not->toBeNull()
+        ->and($checkin->strength_sessions)->toBe($player->isMuscleGain() ? 3 : 2)
+        ->and($checkin->conditioning_sessions)->toBe($player->isMuscleGain() ? 1 : 2)
+        ->and($checkin->mobility_sessions)->toBe(3)
+        ->and($checkin->pickup_monday)->toBeTrue()
+        ->and($checkin->had_full_rest_day)->toBeTrue()
+        ->and($checkin->calculated_training_load)->toBe(720);
+
+    if ($player->tracksNutrition()) {
+        expect($checkin->weight_kg)->not->toBeNull()
+            ->and($checkin->kcal_avg)->not->toBeNull()
+            ->and($checkin->protein_status)->toBe('yes')
+            ->and($checkin->protein_target_days)->toBe(7)
+            ->and($checkin->appetite_score)->toBe(7);
+    } else {
+        expect($checkin->weight_kg)->toBeNull()
+            ->and($checkin->kcal_avg)->toBeNull()
+            ->and($checkin->protein_status)->toBeNull()
+            ->and($checkin->appetite_score)->toBeNull();
+    }
+
+    if ($player->isGuardDevelopment()) {
+        expect($checkin->handle_sessions)->toBe(3)
+            ->and($checkin->handle_minutes)->toBe(90)
+            ->and($checkin->handles_worked_on)->toContain('retreat')
+            ->and($checkin->pickup_sessions)->toBe(2)
+            ->and($checkin->pickup_thursday)->toBeTrue()
+            ->and($checkin->conditioning_minutes)->toBe(60)
+            ->and($checkin->defence_sessions)->toBe(2)
+            ->and($checkin->playbook_calls_learned)->toBe(1)
+            ->and($checkin->playbook_focus)->toContain('Horns');
+    } else {
+        expect($checkin->handle_sessions)->toBeNull()
+            ->and($checkin->handle_minutes)->toBeNull()
+            ->and($checkin->pickup_sessions)->toBeNull()
+            ->and($checkin->conditioning_minutes)->toBeNull()
+            ->and($checkin->defence_sessions)->toBeNull()
+            ->and($checkin->playbook_calls_learned)->toBeNull()
+            ->and($checkin->playbook_focus)->toBeNull();
+    }
+})->with([
+    'conditie' => [Player::Conditioning, 4],
+    'bulk' => [Player::MuscleGain, 4],
+    'onderhoud' => [Player::Maintenance, 3],
+    'guard development' => [Player::GuardDevelopment, 4],
+]);
+
+test('guard development checkin vereist guard-specifieke velden', function () {
+    $player = playerWithUser(['program_type' => Player::GuardDevelopment]);
+
+    Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->set('form.strength_sessions', 2)
+        ->set('form.conditioning_sessions', 2)
+        ->set('form.mobility_sessions', 3)
+        ->set('form.total_training_minutes', 120)
+        ->set('form.highest_session_rpe', 6)
+        ->call('nextStep')
+        ->assertSet('step', 1)
+        ->assertHasErrors([
+            'form.handle_sessions' => 'required',
+            'form.handle_minutes' => 'required',
+            'form.handles_worked_on' => 'required',
+            'form.pickup_sessions' => 'required',
+            'form.conditioning_minutes' => 'required',
+            'form.defence_sessions' => 'required',
+            'form.playbook_calls_learned' => 'required',
+            'form.playbook_focus' => 'required',
+        ])
+        ->assertSet('validationScrollField', 'handle_sessions');
 });
 
 test('speler kan weekcheck invullen en aanpassen', function () {
@@ -839,6 +1117,7 @@ test('autosave werkt bulk details bij zonder de checkin direct in te dienen', fu
 
     Livewire::actingAs($player->user)
         ->test(Checkin::class)
+        ->set('form.pickup_thursday', true)
         ->set('form.weight_kg', 60.5)
         ->set('form.kcal_avg', 3150)
         ->set('form.protein_status', 'partial')
@@ -849,13 +1128,77 @@ test('autosave werkt bulk details bij zonder de checkin direct in te dienen', fu
 
     $checkin = $player->checkins()->firstOrFail();
 
-    expect((float) $checkin->weight_kg)->toBe(60.5)
+    expect($checkin->pickup_thursday)->toBeTrue()
+        ->and((float) $checkin->weight_kg)->toBe(60.5)
         ->and($checkin->kcal_avg)->toBe(3150)
         ->and($checkin->protein_status)->toBe('partial')
         ->and($checkin->protein_avg_grams)->toBe(105)
         ->and($checkin->protein_target_days)->toBe(4)
         ->and($checkin->protein_notes)->toBe('Lunch ging goed, ontbijt mist nog eiwit.')
         ->and($checkin->submitted_at)->toBeNull();
+});
+
+test('guard development speler bewaart handles pickups conditie en voeding', function () {
+    $player = playerWithUser(['program_type' => Player::GuardDevelopment]);
+    $player->settings()->update([
+        'handle_sessions_target_per_week' => 3,
+        'handle_minutes_target_per_week' => 75,
+        'pickup_target_per_week' => 1,
+        'conditioning_minutes_target_per_week' => 50,
+        'defence_sessions_target_per_week' => 2,
+        'playbook_calls_target_per_week' => 1,
+        'kcal_minimum' => 2800,
+        'protein_target_min' => 120,
+        'protein_target_max' => 130,
+    ]);
+
+    Livewire::actingAs($player->user)
+        ->test(Checkin::class)
+        ->set('form.strength_sessions', 2)
+        ->set('form.conditioning_sessions', 2)
+        ->set('form.mobility_sessions', 3)
+        ->set('form.handle_sessions', 3)
+        ->set('form.handle_minutes', 90)
+        ->set('form.handles_worked_on', 'Pound, cross, between, retreat + re-attack, pressure passing.')
+        ->set('form.pickup_sessions', 2)
+        ->set('form.pickup_monday', true)
+        ->set('form.pickup_thursday', true)
+        ->set('form.conditioning_minutes', 60)
+        ->set('form.defence_sessions', 2)
+        ->set('form.playbook_calls_learned', 1)
+        ->set('form.playbook_focus', 'Horns startpositie, optie 1/2 en reset.')
+        ->set('form.attendance_notes', 'Pickup maandag en donderdag aanwezig.')
+        ->set('form.absence_communication_notes', 'Geen afwezigheid.')
+        ->set('form.total_training_minutes', 180)
+        ->set('form.highest_session_rpe', 8)
+        ->set('form.had_full_rest_day', true)
+        ->set('form.sleep_avg_hours', 7.5)
+        ->set('form.energy_score', 8)
+        ->set('form.soreness_score', 3)
+        ->set('form.weight_kg', 70.2)
+        ->set('form.kcal_avg', 3100)
+        ->set('form.protein_target_days', 7)
+        ->set('form.appetite_score', 7)
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertSet('saved', true);
+
+    $checkin = $player->checkins()->firstOrFail();
+
+    expect($checkin->handle_sessions)->toBe(3)
+        ->and($checkin->handle_minutes)->toBe(90)
+        ->and($checkin->handles_worked_on)->toContain('retreat')
+        ->and($checkin->pickup_sessions)->toBe(2)
+        ->and($checkin->conditioning_minutes)->toBe(60)
+        ->and($checkin->defence_sessions)->toBe(2)
+        ->and($checkin->playbook_calls_learned)->toBe(1)
+        ->and($checkin->playbook_focus)->toContain('Horns')
+        ->and($checkin->attendance_notes)->toContain('Pickup maandag')
+        ->and($checkin->absence_communication_notes)->toBe('Geen afwezigheid.')
+        ->and((float) $checkin->weight_kg)->toBe(70.2)
+        ->and($checkin->kcal_avg)->toBe(3100)
+        ->and($checkin->protein_status)->toBe('yes')
+        ->and($checkin->protein_target_days)->toBe(7);
 });
 
 test('anders reden is verplicht en gewicht wordt alleen bij bulk opgeslagen', function () {
@@ -951,6 +1294,7 @@ test('bulk speler bewaart aantal eiwitdagen als doel is gehaald', function () {
         ->set('form.strength_sessions', 3)
         ->set('form.conditioning_sessions', 1)
         ->set('form.mobility_sessions', 3)
+        ->set('form.pickup_thursday', true)
         ->set('form.total_training_minutes', 90)
         ->set('form.highest_session_rpe', 6)
         ->set('form.sleep_avg_hours', 7.5)
@@ -967,7 +1311,8 @@ test('bulk speler bewaart aantal eiwitdagen als doel is gehaald', function () {
 
     $checkin = $player->checkins()->firstOrFail();
 
-    expect($checkin->protein_status)->toBe('yes')
+    expect($checkin->pickup_thursday)->toBeTrue()
+        ->and($checkin->protein_status)->toBe('yes')
         ->and($checkin->protein_target_days)->toBe(7)
         ->and($checkin->protein_avg_grams)->toBeNull()
         ->and($checkin->protein_notes)->toBeNull();
@@ -1322,6 +1667,7 @@ test('seeders volgen targets uit de spelersversie pdf', function () {
 
     $player = Player::query()->where('name', 'Daan Conditie')->with('settings')->firstOrFail();
     $bulk = Player::query()->where('name', 'Milan Bulk')->with('settings')->firstOrFail();
+    $guard = Player::query()->where('name', 'Jos Guard')->with('settings')->firstOrFail();
 
     expect($player->settings->strength_target_per_week)->toBe(2)
         ->and($player->settings->conditioning_target_per_week)->toBe(2)
@@ -1330,11 +1676,18 @@ test('seeders volgen targets uit de spelersversie pdf', function () {
         ->and($bulk->settings->conditioning_target_per_week)->toBe(1)
         ->and($bulk->settings->kcal_pickup_day)->toBe(3600)
         ->and($bulk->notes)->toContain('66-68 kg richting 17 augustus')
+        ->and($guard->program_type)->toBe(Player::GuardDevelopment)
+        ->and($guard->settings->handle_sessions_target_per_week)->toBe(3)
+        ->and($guard->settings->handle_minutes_target_per_week)->toBe(75)
+        ->and($guard->settings->pickup_target_per_week)->toBe(1)
+        ->and($guard->settings->defence_sessions_target_per_week)->toBe(2)
+        ->and($guard->settings->playbook_calls_target_per_week)->toBe(1)
         ->and(ProgramTemplate::query()->where('type', Player::Maintenance)->firstOrFail()->goal)->toContain('minimaal 1 volledige rustdag')
         ->and(ProgramTemplate::query()->where('type', Player::MuscleGain)->firstOrFail()->goal)->toContain('3x kracht')
+        ->and(ProgramTemplate::query()->where('type', Player::GuardDevelopment)->firstOrFail()->goal)->toContain('handles/passing')
         ->and(ProgramPhase::query()->where('name', 'Fase 0: 11 mei t/m 6 juni - pickup + kracht onderhouden')->exists())->toBeTrue()
         ->and(ExerciseLibraryItem::query()->where('name', 'C4 Repeated sprint + COD')->exists())->toBeTrue()
         ->and(ExerciseLibraryItem::query()->where('name', '8 minuten preventieblok')->exists())->toBeTrue()
         ->and(ExerciseLibraryItem::query()->where('name', 'Spiermassa persoonlijke targets')->exists())->toBeTrue()
-        ->and(ExerciseLibraryItem::query()->where('name', 'Maandagpickup voeding')->exists())->toBeTrue();
+        ->and(ExerciseLibraryItem::query()->where('name', 'Pickup voeding')->exists())->toBeTrue();
 });

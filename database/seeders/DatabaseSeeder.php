@@ -92,7 +92,7 @@ class DatabaseSeeder extends Seeder
     private function seedExerciseLibrary(): void
     {
         ExerciseLibraryItem::query()
-            ->whereIn('name', ['Zone 2', 'Tempo runs', 'Basketball HIIT', 'Repeated sprint', 'Court block conditioning', 'Preventieblok'])
+            ->whereIn('name', ['Zone 2', 'Tempo runs', 'Basketball HIIT', 'Repeated sprint', 'Court block conditioning', 'Preventieblok', 'Maandagpickup voeding'])
             ->delete();
 
         $items = [
@@ -114,13 +114,13 @@ class DatabaseSeeder extends Seeder
             ['Blessurepreventie', 'Standaard warming-up', '10-12 minuten: raise, mobiliteit, activatie en basketbalvoorbereiding.', 'Ankle rocks, stretch/hip openers, glute bridge, dead bug, side plank, lateral walk, pogo jumps, lateral bound stick, acceleraties en close-out/backpedal.', 'Maximale sprints of zware sets zonder warming-up.'],
             ['Blessurepreventie', '8 minuten preventieblok', 'Ankle rocks 2x10/kant, single-leg balance reach 2x5/kant, calf raise langzaam 2x12, tibialis raise 2x15, Copenhagen light 2x15-20 sec/kant, hamstring bridge 2x10, lateral bound stick 2x5/kant.', 'Doe dit na warming-up of einde training, 3x per week.', 'Het blok als maximale workout behandelen of pijn negeren.'],
             ['Voeding', 'Spiermassa persoonlijke targets', 'Nu 60 kg. Richting 17 augustus is 66-68 kg goed en 68-70 kg een stretchdoel. Seizoensdoel 70-72 kg, lange termijn 75-80 kg.', 'Weeg 3x per week in de ochtend en stuur op het weekgemiddelde. Gewicht is een meetmiddel; gymkracht, explosiviteit en pijngeschiedenis blijven leidend.', 'Niet elke dag panieken om gewichtsschommelingen. Kijk naar het gemiddelde en de kwaliteit van training.'],
-            ['Voeding', 'Bulk voedingsroutine', 'Dagelijks kcal tracken. Mijn Eetmeter standaard, YAZIO als backup. Rond 20:00 checken hoeveel kcal en eiwit nog openstaat.', 'Rust/licht 3000-3200 kcal, gymdag 3300-3400 kcal, maandagpickup 3600 kcal. Absoluut minimum is 3000 kcal.', 'Eerst eiwit fixen als 120-130g niet lukt. Vloeibare kcal helpen als eetlust laag is.'],
+            ['Voeding', 'Bulk voedingsroutine', 'Dagelijks kcal tracken. Mijn Eetmeter standaard, YAZIO als backup. Rond 20:00 checken hoeveel kcal en eiwit nog openstaat.', 'Rust/licht 3000-3200 kcal, gymdag 3300-3400 kcal, pickupdag 3600 kcal. Absoluut minimum is 3000 kcal.', 'Eerst eiwit fixen als 120-130g niet lukt. Vloeibare kcal helpen als eetlust laag is.'],
             ['Voeding', 'Bulk bijstuurregels', 'Als het weekgemiddelde 2 weken niet stijgt: +250 kcal per dag. Als gewicht sneller dan 1 kg/week stijgt en je voelt je trager: -150 tot -200 kcal of minder vet/suiker.', 'Gebruik makkelijke extra kcal: smoothie, volle kwark, pindakaas, noten, olijfolie, extra boterham of rijst/pasta.', 'Niet extra hard gaan lopen omdat je zwaarder wordt. Houd conditie kort en basketbalgericht.'],
-            ['Voeding', 'Maandagpickup voeding', 'Pickupdag is 3600 kcal. Eet 2-3 uur vooraf een grote maaltijd en 60-90 minuten vooraf een kleine snack.', 'Binnen 60 minuten na pickup: smoothie, kwark of maaltijd met koolhydraten en eiwit.', 'Pickup doen op lege tank en daarna pas laat eten.'],
+            ['Voeding', 'Pickup voeding', 'Pickupdag is 3600 kcal. Eet 2-3 uur vooraf een grote maaltijd en 60-90 minuten vooraf een kleine snack.', 'Binnen 60 minuten na pickup: smoothie, kwark of maaltijd met koolhydraten en eiwit.', 'Pickup doen op lege tank en daarna pas laat eten.'],
             ['Gym', 'Spiermassa Gym A - krachtbasis', 'Squat 4x5-6, DB bench/bench 4x6-8, cable/one-arm row 4x8-10, RDL 3x6-8, calf raise 3x12 + tibialis 2x15, Pallof/dead bug 3x10/kant.', 'RPE 7-8, meestal 1-2 goede reps over. Als alle sets top-range halen met nette techniek: kleine gewichtsstap.', 'Tot failure gaan of onderrug/kniecontrole verliezen.'],
             ['Gym', 'Spiermassa Gym B - posterior chain', 'Trap bar/deadlift 4x4-5, Bulgarian split squat 3x8/been, pull-up/lat pulldown 4x6-10, overhead press 3x6-8, hip thrust 3x8-10, Copenhagen light 2-3x15-25 sec, slider curl/assisted Nordic 2-3x5-8.', 'Bouw kracht en eenbenige controle zonder lies/hamstring te forceren.', 'Zware lower-body stapelen vlak voor pickup of sprintwerk.'],
             ['Gym', 'Spiermassa Gym C - hypertrophy + power', 'Box/squat jump 4x3, med ball throw/pass 4x4, leg press/goblet squat 3x10, DB incline press 3x10, row/pulldown 3x10, hamstring curl 3x10, farmer walk 4x20-30 m.', 'Power fris houden en daarna onderhoud/hypertrophy doen.', 'Sprongen blijven doen als ze traag of zwaar worden.'],
-            ['Conditie', 'Spiermassa conditieregel', 'Maandagpickup telt als de hoofdprikkel. Als pickup stopt: 8x1 min hard/1 min easy of 10x30 sec court work/30 sec rust.', 'Optioneel 6x20 m sprint op zaterdag alleen als benen fris zijn. Stop bij hamstring, kuit of lies die strak voelt.', 'Extra veel duurloop toevoegen terwijl gewicht en kracht moeten stijgen.'],
+            ['Conditie', 'Spiermassa conditieregel', 'Maandagpickup telt als de hoofdprikkel. Donderdagpickup mag je optioneel invullen als je meedoet. Als pickup stopt: 8x1 min hard/1 min easy of 10x30 sec court work/30 sec rust.', 'Optioneel 6x20 m sprint op zaterdag alleen als benen fris zijn. Stop bij hamstring, kuit of lies die strak voelt.', 'Extra veel duurloop toevoegen terwijl gewicht en kracht moeten stijgen.'],
         ];
 
         foreach ($items as $index => [$category, $name, $description, $execution, $cues]) {
@@ -146,6 +146,7 @@ class DatabaseSeeder extends Seeder
             ['Daan Conditie', Player::Conditioning, ['strength' => 2, 'conditioning' => 2, 'mobility' => 3, 'monday' => true, 'thursday' => true]],
             ['Sem Conditie', Player::Conditioning, ['strength' => 2, 'conditioning' => 2, 'mobility' => 3, 'monday' => true, 'thursday' => true]],
             ['Milan Bulk', Player::MuscleGain, ['strength' => 3, 'conditioning' => 1, 'mobility' => 3, 'monday' => true, 'thursday' => false]],
+            ['Jos Guard', Player::GuardDevelopment, ['strength' => 2, 'conditioning' => 2, 'mobility' => 3, 'monday' => true, 'thursday' => true, 'handles' => 3, 'handle_minutes' => 75, 'pickups' => 1, 'conditioning_minutes' => 50, 'defence' => 2, 'playbook' => 1]],
             ['Jay Onderhoud', Player::Maintenance, ['strength' => 2, 'conditioning' => 2, 'mobility' => 3, 'monday' => true, 'thursday' => true]],
             ['Noah Onderhoud', Player::Maintenance, ['strength' => 2, 'conditioning' => 2, 'mobility' => 3, 'monday' => true, 'thursday' => true]],
             ['Levi Onderhoud', Player::Maintenance, ['strength' => 2, 'conditioning' => 2, 'mobility' => 3, 'monday' => true, 'thursday' => true]],
@@ -164,7 +165,11 @@ class DatabaseSeeder extends Seeder
                     'start_weight_kg' => $type === Player::MuscleGain ? 60 : null,
                     'target_weight_kg' => $type === Player::MuscleGain ? 68 : null,
                     'long_term_target_weight_kg' => $type === Player::MuscleGain ? 80 : null,
-                    'notes' => $type === Player::MuscleGain ? '21 jaar, 1.83 m, 60 kg. Eet weinig vlees, wel kip. Maandag pickup, geen donderdagpickup. 66-68 kg richting 17 augustus is goed, 68-70 kg stretch, 70-72 kg seizoensdoel en 75-80 kg lange termijn.' : null,
+                    'notes' => match ($type) {
+                        Player::MuscleGain => '21 jaar, 1.83 m, 60 kg. Eet weinig vlees, wel kip. Maandag pickup, donderdagpickup optioneel als hij meedoet. 66-68 kg richting 17 augustus is goed, 68-70 kg stretch, 70-72 kg seizoensdoel en 75-80 kg lange termijn.',
+                        Player::GuardDevelopment => 'Jos development guard / 1. Focus op structurele aanwezigheid, open communicatie, handles/passing onder druk, conditie/kracht, explosiviteit/defence, plays callen en games lopen zoals bedoeld.',
+                        default => null,
+                    },
                 ],
             );
 
@@ -174,17 +179,27 @@ class DatabaseSeeder extends Seeder
                     'strength_target_per_week' => $settings['strength'],
                     'conditioning_target_per_week' => $settings['conditioning'],
                     'mobility_target_per_week' => $settings['mobility'],
-                    'kcal_rest_day' => $type === Player::MuscleGain ? 3200 : null,
-                    'kcal_training_day' => $type === Player::MuscleGain ? 3400 : null,
-                    'kcal_pickup_day' => $type === Player::MuscleGain ? 3600 : null,
-                    'kcal_minimum' => $type === Player::MuscleGain ? 3000 : null,
-                    'protein_target_min' => $type === Player::MuscleGain ? 120 : null,
-                    'protein_target_max' => $type === Player::MuscleGain ? 130 : null,
+                    'handle_sessions_target_per_week' => $settings['handles'] ?? null,
+                    'handle_minutes_target_per_week' => $settings['handle_minutes'] ?? null,
+                    'pickup_target_per_week' => $settings['pickups'] ?? null,
+                    'conditioning_minutes_target_per_week' => $settings['conditioning_minutes'] ?? null,
+                    'defence_sessions_target_per_week' => $settings['defence'] ?? null,
+                    'playbook_calls_target_per_week' => $settings['playbook'] ?? null,
+                    'kcal_rest_day' => $type === Player::MuscleGain ? 3200 : ($type === Player::GuardDevelopment ? 2800 : null),
+                    'kcal_training_day' => $type === Player::MuscleGain ? 3400 : ($type === Player::GuardDevelopment ? 3200 : null),
+                    'kcal_pickup_day' => $type === Player::MuscleGain ? 3600 : ($type === Player::GuardDevelopment ? 3400 : null),
+                    'kcal_minimum' => $type === Player::MuscleGain ? 3000 : ($type === Player::GuardDevelopment ? 2800 : null),
+                    'protein_target_min' => $type === Player::MuscleGain || $type === Player::GuardDevelopment ? 120 : null,
+                    'protein_target_max' => $type === Player::MuscleGain || $type === Player::GuardDevelopment ? 130 : null,
                     'pickup_monday_expected' => $settings['monday'],
                     'pickup_thursday_expected' => $settings['thursday'],
-                    'uses_mijn_eetmeter' => $type === Player::MuscleGain,
-                    'uses_yazio_backup' => $type === Player::MuscleGain,
-                    'notes' => $type === Player::MuscleGain ? 'Persoonlijk spiermassa-plan: 3 vaste gymmomenten, maandagpickup als basketbalconditie, geen donderdagpickup, 3000 kcal minimum, 3300-3400 kcal op gymdagen, 3600 kcal op pickupdag, 120-130g eiwit, 3x per week ochtendgewicht en elke avond rond 20:00 kcal/eiwit checken.' : null,
+                    'uses_mijn_eetmeter' => $type === Player::MuscleGain || $type === Player::GuardDevelopment,
+                    'uses_yazio_backup' => $type === Player::MuscleGain || $type === Player::GuardDevelopment,
+                    'notes' => match ($type) {
+                        Player::MuscleGain => 'Persoonlijk spiermassa-plan: 3 vaste gymmomenten, maandagpickup als basketbalconditie, donderdagpickup optioneel als hij meedoet, 3000 kcal minimum, 3300-3400 kcal op gymdagen, 3600 kcal op pickupdag, 120-130g eiwit, 3x per week ochtendgewicht en elke avond rond 20:00 kcal/eiwit checken.',
+                        Player::GuardDevelopment => 'Guard development: 3x 25-35 min handles/passing, 2x kracht, 2x conditie/pickup, 2x defence first-step, 1x playbook/calls, 1 rustdag en lean bulk-light met gewicht/kcal/eiwit.',
+                        default => null,
+                    },
                 ],
             );
 
@@ -203,12 +218,16 @@ class DatabaseSeeder extends Seeder
                 WeeklyCheckin::query()->updateOrCreate(
                     ['player_id' => $player->id, 'week_start_date' => $week->toDateString()],
                     [
-                        'weight_kg' => $player->isMuscleGain() ? 60 + ($weekIndex * 0.1) : null,
+                        'weight_kg' => $player->tracksNutrition() ? 60 + ($weekIndex * 0.1) : null,
                         'strength_sessions' => $player->isMuscleGain() ? 2 : ($index % 2 ? 1 : 2),
                         'conditioning_sessions' => $player->isConditioning() ? 2 : 1,
                         'mobility_sessions' => 2,
+                        'handle_sessions' => $player->isGuardDevelopment() ? 2 + $weekIndex : null,
+                        'handle_minutes' => $player->isGuardDevelopment() ? 55 + ($weekIndex * 25) : null,
+                        'handles_worked_on' => $player->isGuardDevelopment() ? 'Pound R/L, cross, between, behind, retreat + re-attack en jump-stop passing.' : null,
                         'pickup_monday' => true,
                         'pickup_thursday' => ! $player->isMuscleGain(),
+                        'pickup_sessions' => $player->isGuardDevelopment() ? 1 : null,
                         'had_full_rest_day' => $index !== 4,
                         'sleep_avg_hours' => $index === 4 ? 6.5 : 7.5,
                         'energy_score' => $index === 1 ? 4 : 7,
@@ -217,18 +236,24 @@ class DatabaseSeeder extends Seeder
                         'pain_location' => $index === 0 && $weekIndex === 1 ? 'rechterknie' : null,
                         'rpe_highest' => $player->isConditioning() ? 8 : null,
                         'total_training_minutes' => 180 + ($index * 10),
+                        'conditioning_minutes' => $player->isGuardDevelopment() ? 40 + ($weekIndex * 15) : null,
+                        'defence_sessions' => $player->isGuardDevelopment() ? 1 + $weekIndex : null,
+                        'playbook_calls_learned' => $player->isGuardDevelopment() ? 1 : null,
+                        'playbook_focus' => $player->isGuardDevelopment() ? 'Horns: startpositie, optie 1/2 en reset hardop doorgenomen.' : null,
+                        'attendance_notes' => $player->isGuardDevelopment() ? 'Pickup maandag en eigen skillmomenten gedaan.' : null,
+                        'absence_communication_notes' => $player->isGuardDevelopment() ? 'Geen onduidelijke afwezigheid.' : null,
                         'highest_session_rpe' => $player->isConditioning() ? 8 : 7,
                         'calculated_training_load' => (180 + ($index * 10)) * ($player->isConditioning() ? 8 : 7),
                         'missed_target_reason' => $index % 2 ? 'geen tijd' : null,
-                        'kcal_avg' => $player->isMuscleGain() ? 3050 : null,
-                        'protein_status' => $player->isMuscleGain() ? 'partial' : null,
-                        'protein_avg_grams' => $player->isMuscleGain() ? 105 + ($weekIndex * 5) : null,
-                        'protein_target_days' => $player->isMuscleGain() ? 4 + $weekIndex : null,
-                        'protein_notes' => $player->isMuscleGain() ? 'Ontbijt en lunch lukken, avond nog wisselend qua eiwit.' : null,
-                        'appetite_score' => $player->isMuscleGain() ? 6 : null,
-                        'used_mijn_eetmeter' => $player->isMuscleGain(),
+                        'kcal_avg' => $player->tracksNutrition() ? 3050 : null,
+                        'protein_status' => $player->tracksNutrition() ? 'partial' : null,
+                        'protein_avg_grams' => $player->tracksNutrition() ? 105 + ($weekIndex * 5) : null,
+                        'protein_target_days' => $player->tracksNutrition() ? 4 + $weekIndex : null,
+                        'protein_notes' => $player->tracksNutrition() ? 'Ontbijt en lunch lukken, avond nog wisselend qua eiwit.' : null,
+                        'appetite_score' => $player->tracksNutrition() ? 6 : null,
+                        'used_mijn_eetmeter' => $player->tracksNutrition(),
                         'used_yazio' => false,
-                        'notes' => $player->isMuscleGain() ? 'Krijg ontbijt lastig weg.' : 'Prima week.',
+                        'notes' => $player->isMuscleGain() ? 'Krijg ontbijt lastig weg.' : ($player->isGuardDevelopment() ? 'Meer rust aan de bal bij retreat-dribble.' : 'Prima week.'),
                         'submitted_at' => now(),
                     ],
                 );

@@ -54,6 +54,18 @@ class Index extends Component
         $this->inviteLinks[$player->id] = route('invite.show', $token);
     }
 
+    public function deletePlayer(int $playerId): void
+    {
+        $player = Player::query()->findOrFail($playerId);
+        $this->authorize('delete', $player);
+
+        $player->delete();
+
+        unset($this->inviteLinks[$playerId]);
+
+        $this->dispatch('player-deleted');
+    }
+
     public function createDefaultProgramTemplates(): void
     {
         $this->authorize('viewAny', Player::class);

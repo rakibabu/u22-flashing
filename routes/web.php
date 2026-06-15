@@ -62,7 +62,7 @@ Route::middleware(['auth', 'role:coach'])->prefix('coach')->name('coach.')->grou
 
         return response()->streamDownload(function () use ($players, $adviceService, $weekStart): void {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['player', 'program', 'readiness', 'status', 'reason', 'compliance', 'week_start', 'history_weeks', 'weight_kg', 'weight_trend', 'strength', 'conditioning', 'mobility', 'rest_day', 'sleep', 'energy', 'pain', 'training_load', 'kcal_avg', 'protein_status', 'protein_avg_grams', 'protein_target_days', 'protein_notes', 'history_summary']);
+            fputcsv($out, ['player', 'program', 'readiness', 'status', 'reason', 'compliance', 'week_start', 'history_weeks', 'weight_kg', 'weight_trend', 'strength', 'conditioning', 'mobility', 'handle_sessions', 'handle_minutes', 'handles_worked_on', 'pickup_sessions', 'conditioning_minutes', 'defence_sessions', 'playbook_calls_learned', 'playbook_focus', 'attendance_notes', 'absence_communication_notes', 'rest_day', 'sleep', 'energy', 'pain', 'training_load', 'kcal_avg', 'protein_status', 'protein_avg_grams', 'protein_target_days', 'protein_notes', 'history_summary']);
 
             foreach ($players as $player) {
                 $checkin = $player->checkins->first(fn ($checkin): bool => $checkin->week_start_date->isSameDay($weekStart));
@@ -82,6 +82,16 @@ Route::middleware(['auth', 'role:coach'])->prefix('coach')->name('coach.')->grou
                     $checkin?->strength_sessions,
                     $checkin?->conditioning_sessions,
                     $checkin?->mobility_sessions,
+                    $checkin?->handle_sessions,
+                    $checkin?->handle_minutes,
+                    $checkin?->handles_worked_on,
+                    $checkin?->pickup_sessions,
+                    $checkin?->conditioning_minutes,
+                    $checkin?->defence_sessions,
+                    $checkin?->playbook_calls_learned,
+                    $checkin?->playbook_focus,
+                    $checkin?->attendance_notes,
+                    $checkin?->absence_communication_notes,
                     $checkin?->had_full_rest_day === null ? null : ($checkin->had_full_rest_day ? 'yes' : 'no'),
                     $checkin?->sleep_avg_hours,
                     $checkin?->energy_score,

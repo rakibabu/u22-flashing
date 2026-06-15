@@ -21,8 +21,12 @@ class CheckinPreview extends Component
         'strength_sessions' => null,
         'conditioning_sessions' => null,
         'mobility_sessions' => null,
+        'handle_sessions' => null,
+        'handle_minutes' => null,
+        'handles_worked_on' => null,
         'pickup_monday' => null,
         'pickup_thursday' => null,
+        'pickup_sessions' => null,
         'had_full_rest_day' => false,
         'sleep_avg_hours' => null,
         'energy_score' => null,
@@ -32,6 +36,12 @@ class CheckinPreview extends Component
         'pain_notes' => null,
         'rpe_highest' => null,
         'total_training_minutes' => null,
+        'conditioning_minutes' => null,
+        'defence_sessions' => null,
+        'playbook_calls_learned' => null,
+        'playbook_focus' => null,
+        'attendance_notes' => null,
+        'absence_communication_notes' => null,
         'highest_session_rpe' => null,
         'calculated_training_load' => null,
         'missed_target_reason' => null,
@@ -141,8 +151,12 @@ class CheckinPreview extends Component
             'form.strength_sessions' => ['nullable', 'integer', 'min:0', 'max:7'],
             'form.conditioning_sessions' => ['nullable', 'integer', 'min:0', 'max:7'],
             'form.mobility_sessions' => ['nullable', 'integer', 'min:0', 'max:7'],
+            'form.handle_sessions' => ['nullable', 'integer', 'min:0', 'max:7'],
+            'form.handle_minutes' => ['nullable', 'integer', 'between:0,600'],
+            'form.handles_worked_on' => ['nullable', 'string', 'max:2000'],
             'form.pickup_monday' => ['nullable', 'boolean'],
             'form.pickup_thursday' => ['nullable', 'boolean'],
+            'form.pickup_sessions' => ['nullable', 'integer', 'min:0', 'max:7'],
             'form.had_full_rest_day' => ['nullable', 'boolean'],
             'form.sleep_avg_hours' => ['nullable', 'numeric', 'between:0,12'],
             'form.energy_score' => ['nullable', 'integer', 'between:1,10'],
@@ -151,6 +165,12 @@ class CheckinPreview extends Component
             'form.pain_location' => ['nullable', 'string', 'max:255'],
             'form.pain_notes' => ['nullable', 'string', 'max:2000'],
             'form.total_training_minutes' => ['nullable', 'integer', 'between:0,2000'],
+            'form.conditioning_minutes' => ['nullable', 'integer', 'between:0,600'],
+            'form.defence_sessions' => ['nullable', 'integer', 'min:0', 'max:7'],
+            'form.playbook_calls_learned' => ['nullable', 'integer', 'min:0', 'max:10'],
+            'form.playbook_focus' => ['nullable', 'string', 'max:2000'],
+            'form.attendance_notes' => ['nullable', 'string', 'max:2000'],
+            'form.absence_communication_notes' => ['nullable', 'string', 'max:2000'],
             'form.highest_session_rpe' => ['nullable', 'integer', 'between:1,10'],
             'form.missed_target_reason' => ['nullable', Rule::in($this->missedTargetReasons())],
             'form.missed_target_reason_other' => ['nullable', 'string', 'max:255'],
@@ -184,7 +204,18 @@ class CheckinPreview extends Component
         $rules['form.missed_target_reason'] = [Rule::requiredIf($this->isUnderTarget()), 'nullable', Rule::in($this->missedTargetReasons())];
         $rules['form.missed_target_reason_other'] = [Rule::requiredIf($this->isUnderTarget() && ($this->form['missed_target_reason'] ?? null) === 'anders'), 'nullable', 'string', 'max:255'];
 
-        if ($this->player->isMuscleGain()) {
+        if ($this->player->isGuardDevelopment()) {
+            $rules['form.handle_sessions'] = ['required', 'integer', 'min:0', 'max:7'];
+            $rules['form.handle_minutes'] = ['required', 'integer', 'between:0,600'];
+            $rules['form.handles_worked_on'] = ['required', 'string', 'max:2000'];
+            $rules['form.pickup_sessions'] = ['required', 'integer', 'min:0', 'max:7'];
+            $rules['form.conditioning_minutes'] = [Rule::requiredIf($this->hasConditioningLoad()), 'nullable', 'integer', 'between:0,600'];
+            $rules['form.defence_sessions'] = ['required', 'integer', 'min:0', 'max:7'];
+            $rules['form.playbook_calls_learned'] = ['required', 'integer', 'min:0', 'max:10'];
+            $rules['form.playbook_focus'] = ['required', 'string', 'max:2000'];
+        }
+
+        if ($this->player->tracksNutrition()) {
             $rules['form.weight_kg'] = ['required', 'numeric', 'between:40,160'];
             $rules['form.kcal_avg'] = ['required', 'integer', 'between:1000,6000'];
             $rules['form.protein_avg_grams'] = [Rule::requiredIf($this->hasIncompleteProtein()), 'nullable', 'integer', 'between:0,250'];
@@ -208,6 +239,18 @@ class CheckinPreview extends Component
                 'form.strength_sessions',
                 'form.conditioning_sessions',
                 'form.mobility_sessions',
+                ...($this->player->isGuardDevelopment() ? [
+                    'form.handle_sessions',
+                    'form.handle_minutes',
+                    'form.handles_worked_on',
+                    'form.pickup_sessions',
+                    'form.conditioning_minutes',
+                    'form.defence_sessions',
+                    'form.playbook_calls_learned',
+                    'form.playbook_focus',
+                    'form.attendance_notes',
+                    'form.absence_communication_notes',
+                ] : []),
                 'form.pickup_monday',
                 'form.pickup_thursday',
                 'form.had_full_rest_day',
@@ -229,7 +272,7 @@ class CheckinPreview extends Component
             ]);
         }
 
-        if ($step === 3 && $this->player->isMuscleGain()) {
+        if ($step === 3 && $this->player->tracksNutrition()) {
             return Arr::only($rules, [
                 'form.weight_kg',
                 'form.kcal_avg',
@@ -301,6 +344,14 @@ class CheckinPreview extends Component
             'form.strength_sessions.required' => 'Kies hoeveel krachttrainingen je hebt gedaan.',
             'form.conditioning_sessions.required' => 'Kies hoeveel conditietrainingen je hebt gedaan.',
             'form.mobility_sessions.required' => 'Kies hoeveel preventie/mobiliteit je hebt gedaan.',
+            'form.handle_sessions.required' => 'Kies hoeveel handle/passing sessies je hebt gedaan.',
+            'form.handle_minutes.required' => 'Vul je totale handle-minuten in.',
+            'form.handles_worked_on.required' => 'Vul in welke handles of passing-drills je hebt geoefend.',
+            'form.pickup_sessions.required' => 'Kies hoeveel pickups je hebt gespeeld.',
+            'form.conditioning_minutes.required' => 'Vul je conditieminuten in.',
+            'form.defence_sessions.required' => 'Kies hoeveel defence/first-step blokken je hebt gedaan.',
+            'form.playbook_calls_learned.required' => 'Kies hoeveel calls of acties je hebt geleerd of herhaald.',
+            'form.playbook_focus.required' => 'Vul in welke call/play je hebt geleerd of herhaald.',
             'form.sleep_avg_hours.required' => 'Vul je gemiddelde slaap per nacht in.',
             'form.energy_score.required' => 'Kies je energiescore.',
             'form.soreness_score.required' => 'Kies of je spierpijn licht of zwaar voelde.',
@@ -327,6 +378,16 @@ class CheckinPreview extends Component
             'form.strength_sessions' => 'krachttrainingen',
             'form.conditioning_sessions' => 'conditietrainingen',
             'form.mobility_sessions' => 'preventie/mobiliteit',
+            'form.handle_sessions' => 'handle/passing sessies',
+            'form.handle_minutes' => 'handle-minuten',
+            'form.handles_worked_on' => 'geoefende handles',
+            'form.pickup_sessions' => 'pickups',
+            'form.conditioning_minutes' => 'conditieminuten',
+            'form.defence_sessions' => 'defence/first-step blokken',
+            'form.playbook_calls_learned' => 'calls geleerd',
+            'form.playbook_focus' => 'playbook focus',
+            'form.attendance_notes' => 'aanwezigheid',
+            'form.absence_communication_notes' => 'communicatie bij afwezigheid',
             'form.sleep_avg_hours' => 'slaap',
             'form.energy_score' => 'energie',
             'form.soreness_score' => 'spierpijn',
@@ -367,7 +428,33 @@ class CheckinPreview extends Component
             return true;
         }
 
-        if (! $this->player->isMuscleGain()) {
+        if ($this->player->isGuardDevelopment()) {
+            if ((int) ($this->form['handle_sessions'] ?? 0) < (int) ($settings?->handle_sessions_target_per_week ?? 0)) {
+                return true;
+            }
+
+            if ((int) ($this->form['handle_minutes'] ?? 0) < (int) ($settings?->handle_minutes_target_per_week ?? 0)) {
+                return true;
+            }
+
+            if ((int) ($this->form['pickup_sessions'] ?? 0) < (int) ($settings?->pickup_target_per_week ?? 0)) {
+                return true;
+            }
+
+            if ((int) ($this->form['conditioning_minutes'] ?? 0) < (int) ($settings?->conditioning_minutes_target_per_week ?? 0)) {
+                return true;
+            }
+
+            if ((int) ($this->form['defence_sessions'] ?? 0) < (int) ($settings?->defence_sessions_target_per_week ?? 0)) {
+                return true;
+            }
+
+            if ((int) ($this->form['playbook_calls_learned'] ?? 0) < (int) ($settings?->playbook_calls_target_per_week ?? 0)) {
+                return true;
+            }
+        }
+
+        if (! $this->player->tracksNutrition()) {
             return false;
         }
 
@@ -394,6 +481,7 @@ class CheckinPreview extends Component
     private function hasConditioningLoad(): bool
     {
         return (int) ($this->form['conditioning_sessions'] ?? 0) > 0
+            || (int) ($this->form['conditioning_minutes'] ?? 0) > 0
             || (bool) ($this->form['pickup_monday'] ?? false)
             || (bool) ($this->form['pickup_thursday'] ?? false);
     }
@@ -427,7 +515,7 @@ class CheckinPreview extends Component
             return 'Vul je slaap in en kies je energie- en spierpijnscore.';
         }
 
-        if ($step === 3 && $this->player->isMuscleGain()) {
+        if ($step === 3 && $this->player->tracksNutrition()) {
             return 'Vul je gewicht, kcal, eiwitdagen en eetlust in.';
         }
 

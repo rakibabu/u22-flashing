@@ -171,7 +171,7 @@ class Show extends Component
 
         return view('livewire.coach.players.show', [
             'evaluation' => $evaluation,
-            'bulk' => $this->player->isMuscleGain() ? $adviceService->bulkSummary($advicePlayer, $weekStart) : null,
+            'bulk' => $this->player->tracksNutrition() ? $adviceService->bulkSummary($advicePlayer, $weekStart) : null,
             'timeline' => $adviceService->timelineFor($this->player),
             'whatsAppMessage' => $whatsAppMessageService->forPlayer($advicePlayer, $evaluation),
             'selectedAdviceCheckin' => $selectedAdviceCheckin,

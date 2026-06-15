@@ -16,6 +16,8 @@
 
 @php
     $isBulk = $player->isMuscleGain();
+    $isGuardDevelopment = $player->isGuardDevelopment();
+    $tracksNutrition = $player->tracksNutrition();
     $isConditioning = $player->isConditioning();
     $settings = $player->settings;
     $hasFormError = fn (string $key): bool => $errors->has("form.{$key}");
@@ -25,7 +27,7 @@
         ['number' => 2, 'label' => 'Herstel'],
     ];
 
-    if ($isBulk) {
+    if ($tracksNutrition) {
         $steps[] = ['number' => 3, 'label' => 'Voeding'];
     } elseif ($isConditioning) {
         $steps[] = ['number' => 3, 'label' => 'Belasting'];
@@ -59,6 +61,18 @@
     $conditioningTarget = (int) ($settings?->conditioning_target_per_week ?? 0);
     $mobilityDone = (int) ($form['mobility_sessions'] ?? 0);
     $mobilityTarget = (int) ($settings?->mobility_target_per_week ?? 0);
+    $handleSessionsDone = (int) ($form['handle_sessions'] ?? 0);
+    $handleSessionsTarget = (int) ($settings?->handle_sessions_target_per_week ?? 0);
+    $handleMinutesDone = (int) ($form['handle_minutes'] ?? 0);
+    $handleMinutesTarget = (int) ($settings?->handle_minutes_target_per_week ?? 0);
+    $pickupDone = (int) ($form['pickup_sessions'] ?? 0);
+    $pickupTarget = (int) ($settings?->pickup_target_per_week ?? 0);
+    $conditioningMinutesDone = (int) ($form['conditioning_minutes'] ?? 0);
+    $conditioningMinutesTarget = (int) ($settings?->conditioning_minutes_target_per_week ?? 0);
+    $defenceDone = (int) ($form['defence_sessions'] ?? 0);
+    $defenceTarget = (int) ($settings?->defence_sessions_target_per_week ?? 0);
+    $playbookDone = (int) ($form['playbook_calls_learned'] ?? 0);
+    $playbookTarget = (int) ($settings?->playbook_calls_target_per_week ?? 0);
     $hasConditioningLoad = $isConditioning
         || $conditioningDone > 0
         || (bool) ($form['pickup_monday'] ?? false)
@@ -67,7 +81,7 @@
     $kcalMinimum = (int) ($settings?->kcal_minimum ?? 0);
     $proteinStatus = $form['protein_status'] ?? null;
     $proteinTargetDays = $form['protein_target_days'] ?? null;
-    $proteinTrackingNeeded = $isBulk && (
+    $proteinTrackingNeeded = $tracksNutrition && (
         ($proteinTargetDays !== null && (int) $proteinTargetDays < 6)
         || in_array($proteinStatus, ['partial', 'no'], true)
     );
@@ -91,7 +105,31 @@
         $underTargetReasons[] = 'Preventie/mobiliteit: '.$targetProgress($form['mobility_sessions'] ?? null, $mobilityTarget).' keer ingevuld.';
     }
 
-    if ($isBulk && $kcalAverage !== null && (int) $kcalAverage < $kcalMinimum) {
+    if ($isGuardDevelopment && $handleSessionsDone < $handleSessionsTarget) {
+        $underTargetReasons[] = 'Handles/passing: '.$targetProgress($form['handle_sessions'] ?? null, $handleSessionsTarget).' sessies ingevuld.';
+    }
+
+    if ($isGuardDevelopment && $handleMinutesDone < $handleMinutesTarget) {
+        $underTargetReasons[] = "Handle-minuten: {$handleMinutesDone}/{$handleMinutesTarget} minuten ingevuld.";
+    }
+
+    if ($isGuardDevelopment && $pickupDone < $pickupTarget) {
+        $underTargetReasons[] = 'Pickups: '.$targetProgress($form['pickup_sessions'] ?? null, $pickupTarget).' keer ingevuld.';
+    }
+
+    if ($isGuardDevelopment && $conditioningMinutesDone < $conditioningMinutesTarget) {
+        $underTargetReasons[] = "Conditieminuten: {$conditioningMinutesDone}/{$conditioningMinutesTarget} minuten ingevuld.";
+    }
+
+    if ($isGuardDevelopment && $defenceDone < $defenceTarget) {
+        $underTargetReasons[] = 'Defence/first-step: '.$targetProgress($form['defence_sessions'] ?? null, $defenceTarget).' blokken ingevuld.';
+    }
+
+    if ($isGuardDevelopment && $playbookDone < $playbookTarget) {
+        $underTargetReasons[] = 'Playbook/calls: '.$targetProgress($form['playbook_calls_learned'] ?? null, $playbookTarget).' calls ingevuld.';
+    }
+
+    if ($tracksNutrition && $kcalAverage !== null && (int) $kcalAverage < $kcalMinimum) {
         $underTargetReasons[] = "Kcal: gemiddeld {$kcalAverage} per dag, minimum is {$kcalMinimum}.";
     }
 
@@ -113,7 +151,14 @@
         ['label' => 'Pijn', 'value' => ($form['pain'] ?? false) ? 'Ja' : 'Nee'],
     ];
 
-    if ($isBulk) {
+    if ($isGuardDevelopment) {
+        $summaryItems[] = ['label' => 'Handles', 'value' => $displayValue($form['handle_minutes'] ?? null, ' min')];
+        $summaryItems[] = ['label' => 'Pickups', 'value' => $displayValue($form['pickup_sessions'] ?? null, 'x')];
+        $summaryItems[] = ['label' => 'Defence', 'value' => $displayValue($form['defence_sessions'] ?? null, 'x')];
+        $summaryItems[] = ['label' => 'Calls', 'value' => $displayValue($form['playbook_calls_learned'] ?? null, 'x')];
+    }
+
+    if ($tracksNutrition) {
         $summaryItems[] = ['label' => 'Gewicht', 'value' => $displayValue($form['weight_kg'] ?? null, ' kg')];
         $summaryItems[] = ['label' => 'Kcal', 'value' => $displayValue($form['kcal_avg'] ?? null)];
         $summaryItems[] = ['label' => 'Eiwitdagen', 'value' => $displayValue($proteinTargetDays, '/7')];
@@ -412,6 +457,124 @@
                 </div>
             </div>
 
+            @if ($isGuardDevelopment)
+                <div class="grid gap-4">
+                    <div class="u22-number-grid u22-number-grid-two">
+                        <div data-checkin-field="handle_sessions" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('handle_sessions')])>
+                            <div class="u22-choice-head">
+                                <p>Handle/passing sessies</p>
+                                <span>Doel {{ $settings?->handle_sessions_target_per_week ?? 3 }}x</span>
+                            </div>
+                            <div class="u22-choice-grid u22-choice-grid-count">
+                                @foreach ($countOptions as $value => $label)
+                                    <label class="u22-choice-chip" wire:key="handle-count-{{ $value }}">
+                                        <input class="sr-only" type="radio" wire:model.live="form.handle_sessions" value="{{ $value }}">
+                                        <span>{{ $label }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error('form.handle_sessions') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div data-checkin-field="handle_minutes" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('handle_minutes')])>
+                            <div class="u22-choice-head">
+                                <p>Handle-minuten</p>
+                                <span>Doel {{ $settings?->handle_minutes_target_per_week ?? 75 }} min</span>
+                            </div>
+                            <label class="u22-sleep-field" for="checkin-handle-minutes">
+                                <input id="checkin-handle-minutes" class="u22-sleep-input" wire:model.live.debounce.400ms="form.handle_minutes" type="number" min="0" max="600" inputmode="numeric" placeholder="-">
+                                <span>min</span>
+                            </label>
+                            @error('form.handle_minutes') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div data-checkin-field="handles_worked_on">
+                        <flux:textarea wire:model.live.debounce.750ms="form.handles_worked_on" label="Welke handles/passing heb je geoefend?" rows="3" />
+                        @error('form.handles_worked_on') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div class="u22-number-grid u22-number-grid-two">
+                        <div data-checkin-field="pickup_sessions" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('pickup_sessions')])>
+                            <div class="u22-choice-head">
+                                <p>Aantal pickups</p>
+                                <span>Doel {{ $settings?->pickup_target_per_week ?? 1 }}x</span>
+                            </div>
+                            <div class="u22-choice-grid u22-choice-grid-count">
+                                @foreach ($countOptions as $value => $label)
+                                    <label class="u22-choice-chip" wire:key="pickup-count-{{ $value }}">
+                                        <input class="sr-only" type="radio" wire:model.live="form.pickup_sessions" value="{{ $value }}">
+                                        <span>{{ $label }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error('form.pickup_sessions') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div data-checkin-field="conditioning_minutes" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('conditioning_minutes')])>
+                            <div class="u22-choice-head">
+                                <p>Conditieminuten</p>
+                                <span>Doel {{ $settings?->conditioning_minutes_target_per_week ?? 50 }} min</span>
+                            </div>
+                            <label class="u22-sleep-field" for="checkin-conditioning-minutes">
+                                <input id="checkin-conditioning-minutes" class="u22-sleep-input" wire:model.live.debounce.400ms="form.conditioning_minutes" type="number" min="0" max="600" inputmode="numeric" placeholder="-">
+                                <span>min</span>
+                            </label>
+                            @error('form.conditioning_minutes') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div class="u22-number-grid u22-number-grid-two">
+                        <div data-checkin-field="defence_sessions" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('defence_sessions')])>
+                            <div class="u22-choice-head">
+                                <p>Defence/first-step blokken</p>
+                                <span>Doel {{ $settings?->defence_sessions_target_per_week ?? 2 }}x</span>
+                            </div>
+                            <div class="u22-choice-grid u22-choice-grid-count">
+                                @foreach ($countOptions as $value => $label)
+                                    <label class="u22-choice-chip" wire:key="defence-count-{{ $value }}">
+                                        <input class="sr-only" type="radio" wire:model.live="form.defence_sessions" value="{{ $value }}">
+                                        <span>{{ $label }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error('form.defence_sessions') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div data-checkin-field="playbook_calls_learned" @class(['u22-choice-block', 'u22-field-error' => $hasFormError('playbook_calls_learned')])>
+                            <div class="u22-choice-head">
+                                <p>Calls/acties geleerd</p>
+                                <span>Doel {{ $settings?->playbook_calls_target_per_week ?? 1 }}x</span>
+                            </div>
+                            <div class="u22-choice-grid u22-choice-grid-count">
+                                @foreach ($countOptions as $value => $label)
+                                    <label class="u22-choice-chip" wire:key="playbook-count-{{ $value }}">
+                                        <input class="sr-only" type="radio" wire:model.live="form.playbook_calls_learned" value="{{ $value }}">
+                                        <span>{{ $label }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error('form.playbook_calls_learned') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div data-checkin-field="playbook_focus">
+                        <flux:textarea wire:model.live.debounce.750ms="form.playbook_focus" label="Welke call/play heb je geleerd of herhaald?" rows="3" />
+                        @error('form.playbook_focus') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div data-checkin-field="attendance_notes">
+                            <flux:textarea wire:model.live.debounce.750ms="form.attendance_notes" label="Aanwezig bij welke teammomenten/pickups?" rows="3" />
+                        </div>
+
+                        <div data-checkin-field="absence_communication_notes">
+                            <flux:textarea wire:model.live.debounce.750ms="form.absence_communication_notes" label="Afwezigheid vooraf gemeld en alternatief?" rows="3" />
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <div class="grid gap-3">
                 <label class="u22-check-card">
                     <input type="checkbox" wire:model.live="form.pickup_monday">
@@ -421,19 +584,13 @@
                     </span>
                 </label>
 
-                @if ($isBulk)
-                    <div class="rounded-xl border border-primary-100 bg-primary-50 p-4 text-sm text-primary-800">
-                        Donderdagpickup staat niet in jouw spiermassa-plan.
-                    </div>
-                @else
-                    <label class="u22-check-card">
-                        <input type="checkbox" wire:model.live="form.pickup_thursday">
-                        <span>
-                            <strong>Pickup donderdag</strong>
-                            <small>{{ $settings?->pickup_thursday_expected ? 'Staat in jouw planning' : 'Alleen invullen als je meedeed' }}</small>
-                        </span>
-                    </label>
-                @endif
+                <label class="u22-check-card">
+                    <input type="checkbox" wire:model.live="form.pickup_thursday">
+                    <span>
+                        <strong>Pickup donderdag</strong>
+                        <small>{{ $settings?->pickup_thursday_expected ? 'Staat in jouw planning' : 'Alleen invullen als je meedeed' }}</small>
+                    </span>
+                </label>
 
                 <label class="u22-check-card">
                     <input type="checkbox" wire:model.live="form.had_full_rest_day">
@@ -572,15 +729,15 @@
                 </div>
             @endif
         </section>
-    @elseif ($step === 3 && $isBulk)
+    @elseif ($step === 3 && $tracksNutrition)
         <section class="space-y-5">
             <div>
                 <h2 class="font-display text-3xl leading-none text-primary-900">Voeding</h2>
-                <p class="mt-1 text-sm text-zinc-600">Spiermassa-plan: gewicht, kcal, eiwit en eetlust.</p>
+                <p class="mt-1 text-sm text-zinc-600">{{ $isBulk ? 'Spiermassa-plan' : 'Lean bulk-light' }}: gewicht, kcal, eiwit en eetlust.</p>
             </div>
 
             <div class="rounded-2xl border border-flash-orange/25 bg-flash-orange/10 p-4 text-sm text-primary-900">
-                Minimum {{ $settings?->kcal_minimum ?? 3000 }} kcal. Gymdag {{ $settings?->kcal_training_day ?? 3400 }} kcal. Maandagpickup {{ $settings?->kcal_pickup_day ?? 3600 }} kcal. Eiwit {{ $settings?->protein_target_min ?? 120 }}-{{ $settings?->protein_target_max ?? 130 }}g.
+                Minimum {{ $settings?->kcal_minimum ?? 3000 }} kcal. Gymdag {{ $settings?->kcal_training_day ?? 3400 }} kcal. Pickupdag {{ $settings?->kcal_pickup_day ?? 3600 }} kcal. Eiwit {{ $settings?->protein_target_min ?? 120 }}-{{ $settings?->protein_target_max ?? 130 }}g.
             </div>
 
             <div class="u22-number-grid u22-number-grid-two">
@@ -780,7 +937,7 @@
             @endif
 
             <div data-checkin-field="notes">
-                <flux:textarea wire:model.live.debounce.750ms="form.notes" rows="4" :label="$isBulk ? 'Extra opmerking voor de coach over training of eten' : 'Extra opmerking voor de coach'" />
+                <flux:textarea wire:model.live.debounce.750ms="form.notes" rows="4" :label="$tracksNutrition ? 'Extra opmerking voor de coach over training of eten' : 'Extra opmerking voor de coach'" />
                 @error('form.notes') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
         </section>

@@ -7,6 +7,7 @@
             <flux:select.option value="conditioning">Conditie</flux:select.option>
             <flux:select.option value="muscle_gain">Bulk/kracht/spiermassa</flux:select.option>
             <flux:select.option value="maintenance">Onderhoud</flux:select.option>
+            <flux:select.option value="guard_development">Guard development</flux:select.option>
         </flux:select>
         <div class="grid gap-4 sm:grid-cols-3">
             <flux:input wire:model="age" type="number" label="Leeftijd" />

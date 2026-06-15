@@ -155,6 +155,10 @@ class Dashboard extends Component
                 ->filter(fn (array $row): bool => $row['player']->isMuscleGain())
                 ->map(fn (array $row): array => $row + ['bulk' => $adviceService->bulkSummary($row['player'], $weekStart)])
                 ->values(),
+            'guardRows' => $allRows
+                ->filter(fn (array $row): bool => $row['player']->isGuardDevelopment())
+                ->map(fn (array $row): array => $row + ['guard' => $adviceService->bulkSummary($row['player'], $weekStart)])
+                ->values(),
             'missingPlayers' => $missingPlayers,
             'groupReminder' => $missingPlayers->isNotEmpty() ? $whatsAppMessageService->groupCheckinReminder($missingPlayers) : '',
             'activePlayers' => Player::query()->where('active', true)->count(),

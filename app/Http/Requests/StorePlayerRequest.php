@@ -20,7 +20,7 @@ class StorePlayerRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'program_type' => ['required', Rule::in([Player::Conditioning, Player::MuscleGain, Player::Maintenance])],
+            'program_type' => ['required', Rule::in([Player::Conditioning, Player::MuscleGain, Player::Maintenance, Player::GuardDevelopment])],
             'age' => ['nullable', 'integer', 'between:12,40'],
             'height_cm' => ['nullable', 'integer', 'between:140,230'],
             'start_weight_kg' => ['nullable', 'numeric', 'between:40,160'],

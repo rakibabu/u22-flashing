@@ -34,6 +34,12 @@ class ProgramTemplate extends Model
                 'goal' => '2x kracht, 2x conditie/pickup, 3x 8 minuten blessurepreventie en minimaal 1 volledige rustdag per week.',
                 'sort_order' => 3,
             ],
+            Player::GuardDevelopment => [
+                'name' => 'Trainingstype D: Guard development',
+                'description' => 'Persoonlijk guard-traject richting de 1 met commitment, handles onder druk, passing, defence, playcalling, conditie/kracht en voeding als meetpunten.',
+                'goal' => '3x handles/passing, 2x kracht, 2x conditie/pickup, 2x defence/first-step, 1x playbook/calls en wekelijkse communicatie over aanwezigheid.',
+                'sort_order' => 4,
+            ],
         ];
     }
 

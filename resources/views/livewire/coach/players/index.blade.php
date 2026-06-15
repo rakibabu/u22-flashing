@@ -10,7 +10,7 @@
             <p class="text-xs font-semibold uppercase text-primary-700">Trainingsprogramma PDF's</p>
             <h2 class="mt-1 font-display text-3xl leading-none text-primary-900">Per trainingstype</h2>
             <p class="mt-1 max-w-2xl text-sm text-zinc-600">
-                Upload hier de PDF voor conditie, bulk/kracht of onderhoud. Spelers zien automatisch de PDF van hun eigen trainingstype.
+                Upload hier de PDF voor conditie, bulk/kracht, onderhoud of guard development. Spelers zien automatisch de PDF van hun eigen trainingstype.
             </p>
         </div>
 
@@ -147,6 +147,7 @@
                     <flux:button size="sm" :href="route('coach.players.show', $player)" wire:navigate>Bekijk</flux:button>
                     <flux:button size="sm" :href="route('coach.players.checkin-preview', $player)" wire:navigate>Weekcheck scherm</flux:button>
                     <flux:button size="sm" wire:click="regenerateInvite({{ $player->id }})">Nieuwe invite</flux:button>
+                    <flux:button size="sm" variant="danger" icon="trash" wire:click="deletePlayer({{ $player->id }})" wire:confirm="Weet je zeker dat je {{ $player->name }} wilt verwijderen? Check-ins, invites, testresultaten en coach-notities van deze speler worden ook verwijderd.">Verwijder</flux:button>
                 </div>
             </article>
         @endforeach

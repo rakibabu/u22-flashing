@@ -20,6 +20,8 @@ class Player extends Model
 
     public const Maintenance = 'maintenance';
 
+    public const GuardDevelopment = 'guard_development';
+
     protected $fillable = [
         'user_id',
         'name',
@@ -90,6 +92,7 @@ class Player extends Model
         return match ($this->program_type) {
             self::Conditioning => 'Conditie',
             self::MuscleGain => 'Bulk/kracht',
+            self::GuardDevelopment => 'Guard development',
             default => 'Onderhoud',
         };
     }
@@ -102,5 +105,15 @@ class Player extends Model
     public function isConditioning(): bool
     {
         return $this->program_type === self::Conditioning;
+    }
+
+    public function isGuardDevelopment(): bool
+    {
+        return $this->program_type === self::GuardDevelopment;
+    }
+
+    public function tracksNutrition(): bool
+    {
+        return $this->isMuscleGain() || $this->isGuardDevelopment();
     }
 }

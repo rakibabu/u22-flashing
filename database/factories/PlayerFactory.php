@@ -20,7 +20,7 @@ class PlayerFactory extends Factory
         return [
             'name' => fake()->name(),
             'active' => true,
-            'program_type' => fake()->randomElement([Player::Conditioning, Player::MuscleGain, Player::Maintenance]),
+            'program_type' => fake()->randomElement([Player::Conditioning, Player::MuscleGain, Player::Maintenance, Player::GuardDevelopment]),
             'age' => fake()->numberBetween(17, 22),
             'height_cm' => fake()->numberBetween(175, 205),
             'start_weight_kg' => fake()->randomFloat(1, 60, 95),

@@ -64,7 +64,35 @@
         </section>
     </div>
 
-    @if ($player->isMuscleGain())
+    @if ($player->isGuardDevelopment())
+        <section class="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 class="font-semibold text-zinc-950 dark:text-white">Guard development</h2>
+            <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-4">
+                <div><dt class="text-zinc-500">Handle sessies</dt><dd class="font-medium">{{ $checkin->handle_sessions ?? 'n.v.t.' }}</dd></div>
+                <div><dt class="text-zinc-500">Handle-minuten</dt><dd class="font-medium">{{ $checkin->handle_minutes !== null ? $checkin->handle_minutes.' min' : 'n.v.t.' }}</dd></div>
+                <div><dt class="text-zinc-500">Pickups</dt><dd class="font-medium">{{ $checkin->pickup_sessions ?? 'n.v.t.' }}</dd></div>
+                <div><dt class="text-zinc-500">Conditieminuten</dt><dd class="font-medium">{{ $checkin->conditioning_minutes !== null ? $checkin->conditioning_minutes.' min' : 'n.v.t.' }}</dd></div>
+                <div><dt class="text-zinc-500">Defence</dt><dd class="font-medium">{{ $checkin->defence_sessions ?? 'n.v.t.' }}</dd></div>
+                <div><dt class="text-zinc-500">Calls</dt><dd class="font-medium">{{ $checkin->playbook_calls_learned ?? 'n.v.t.' }}</dd></div>
+            </dl>
+            @if ($checkin->handles_worked_on)
+                <p class="mt-4 rounded-md bg-primary-50 p-3 text-sm text-primary-950 dark:bg-primary-950 dark:text-primary-100">Handles: {{ $checkin->handles_worked_on }}</p>
+            @endif
+            @if ($checkin->playbook_focus)
+                <p class="mt-2 rounded-md bg-primary-50 p-3 text-sm text-primary-950 dark:bg-primary-950 dark:text-primary-100">Playbook: {{ $checkin->playbook_focus }}</p>
+            @endif
+            @if ($checkin->attendance_notes || $checkin->absence_communication_notes)
+                <p class="mt-2 rounded-md bg-primary-50 p-3 text-sm text-primary-950 dark:bg-primary-950 dark:text-primary-100">
+                    Aanwezigheid: {{ $checkin->attendance_notes ?: 'n.v.t.' }}
+                    @if ($checkin->absence_communication_notes)
+                        <br>Communicatie: {{ $checkin->absence_communication_notes }}
+                    @endif
+                </p>
+            @endif
+        </section>
+    @endif
+
+    @if ($player->tracksNutrition())
         @php
             $proteinStatusLabel = [
                 'yes' => 'Ja (6-7 dagen)',
@@ -74,7 +102,7 @@
         @endphp
 
         <section class="rounded-lg border border-orange-200 bg-orange-50 p-4 text-orange-950 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-100">
-            <h2 class="font-semibold">Voeding en bulk</h2>
+            <h2 class="font-semibold">{{ $player->isGuardDevelopment() ? 'Voeding en lean bulk-light' : 'Voeding en bulk' }}</h2>
             <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-4">
                 <div><dt class="opacity-75">Gewicht</dt><dd class="font-medium">{{ $checkin->weight_kg ?? 'n.v.t.' }}</dd></div>
                 <div><dt class="opacity-75">Gem. kcal</dt><dd class="font-medium">{{ $checkin->kcal_avg ?? 'n.v.t.' }}</dd></div>

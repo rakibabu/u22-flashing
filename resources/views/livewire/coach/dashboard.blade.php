@@ -121,6 +121,40 @@
                 @endforelse
             </div>
         </section>
+
+        <section class="rounded-lg border border-primary-800/10 bg-white p-4 shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
+            <h2 class="font-display text-2xl font-normal leading-none text-primary-900 dark:text-white">Guard-dashboard</h2>
+            <div class="mt-2 h-1 w-10 bg-flash-orange"></div>
+            <div class="mt-3 space-y-3">
+                @forelse ($guardRows as $row)
+                    <div class="rounded-md bg-primary-50 p-3 text-sm dark:bg-primary-900" wire:key="guard-{{ $row['player']->id }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="font-medium text-primary-900 dark:text-white">{{ $row['player']->name }}</p>
+                            <x-status-badge :status="$row['status']" />
+                        </div>
+                        <div class="mt-2 grid gap-2 sm:grid-cols-4">
+                            <span>Handles: {{ $row['guard']['handle_minutes'] ?? 'n.v.t.' }} min</span>
+                            <span>Handle sessies: {{ $row['guard']['handle_sessions'] ?? 'n.v.t.' }}</span>
+                            <span>Pickups: {{ $row['guard']['pickup_sessions'] ?? 'n.v.t.' }}</span>
+                            <span>Conditie: {{ $row['guard']['conditioning_minutes'] ?? 'n.v.t.' }} min</span>
+                            <span>Defence: {{ $row['guard']['defence_sessions'] ?? 'n.v.t.' }}</span>
+                            <span>Calls: {{ $row['guard']['playbook_calls_learned'] ?? 'n.v.t.' }}</span>
+                            <span>Kcal: {{ $row['guard']['kcal_avg'] ?? 'n.v.t.' }}</span>
+                            <span>Eiwitdagen: {{ $row['guard']['protein_target_days'] !== null ? $row['guard']['protein_target_days'].'/7' : 'n.v.t.' }}</span>
+                        </div>
+                        @if ($row['guard']['handles_worked_on'])
+                            <p class="mt-2 text-zinc-700 dark:text-zinc-300">Handles: {{ $row['guard']['handles_worked_on'] }}</p>
+                        @endif
+                        @if ($row['guard']['playbook_focus'])
+                            <p class="mt-1 text-zinc-700 dark:text-zinc-300">Playbook: {{ $row['guard']['playbook_focus'] }}</p>
+                        @endif
+                        <p class="mt-2 text-zinc-700 dark:text-zinc-300">{{ $row['guard']['kcal_advice'] }}</p>
+                    </div>
+                @empty
+                    <p class="text-sm text-zinc-600 dark:text-zinc-300">Geen guard-development spelers actief.</p>
+                @endforelse
+            </div>
+        </section>
     </div>
 
     <div class="grid gap-3 md:grid-cols-3">
@@ -130,6 +164,7 @@
             <flux:select.option value="conditioning">Conditie</flux:select.option>
             <flux:select.option value="muscle_gain">Bulk/kracht</flux:select.option>
             <flux:select.option value="maintenance">Onderhoud</flux:select.option>
+            <flux:select.option value="guard_development">Guard development</flux:select.option>
         </flux:select>
         <flux:select wire:model.live="status" placeholder="Alle statussen">
             <flux:select.option value="">Alle statussen</flux:select.option>

@@ -36,13 +36,18 @@
 
     @if ($bulk)
         <section class="rounded-lg border border-flash-orange/30 bg-flash-orange/10 p-4 text-primary-900 dark:border-flash-orange/40 dark:bg-flash-orange/15 dark:text-orange-50">
-            <h2 class="font-display text-2xl font-normal leading-none">Bulk-dashboard</h2>
+            <h2 class="font-display text-2xl font-normal leading-none">{{ $player->isGuardDevelopment() ? 'Guard-dashboard' : 'Bulk-dashboard' }}</h2>
             <div class="mt-2 h-1 w-10 bg-flash-orange"></div>
             <div class="mt-3 grid gap-3 sm:grid-cols-4">
                 <x-metric-card label="Huidig gewicht" :value="$bulk['current_weight'] ?? 'n.v.t.'" />
                 <x-metric-card label="Gewichtstrend" :value="$bulk['weight_trend'] === null ? 'n.v.t.' : number_format($bulk['weight_trend'], 1).' kg/w'" />
-                <x-metric-card label="17 aug doel" :value="$bulk['target_weight'] ? number_format($bulk['target_weight'], 0).' kg' : '66-68 kg'" />
-                <x-metric-card label="Stretchdoel" :value="$bulk['stretch_target']" />
+                @if ($player->isMuscleGain())
+                    <x-metric-card label="17 aug doel" :value="$bulk['target_weight'] ? number_format($bulk['target_weight'], 0).' kg' : '66-68 kg'" />
+                    <x-metric-card label="Stretchdoel" :value="$bulk['stretch_target']" />
+                @else
+                    <x-metric-card label="Voedingsdoel" value="Sterker zonder traag te worden" />
+                    <x-metric-card label="Trenddoel" value="+0.2 tot +0.4 kg/w" />
+                @endif
                 <x-metric-card label="Gem. kcal" :value="$bulk['kcal_avg'] ?? 'n.v.t.'" />
                 <x-metric-card label="Kcal gym/pickup" :value="($bulk['kcal_training_day'] ?? 'n.v.t.').'/'.($bulk['kcal_pickup_day'] ?? 'n.v.t.')" />
                 <x-metric-card label="Eiwitstatus" :value="$bulk['protein_status'] ?? 'n.v.t.'" />
@@ -52,8 +57,24 @@
                 <x-metric-card label="Kracht" :value="$bulk['strength_sessions'] ?? 'n.v.t.'" />
                 <x-metric-card label="Pickup maandag" :value="$bulk['pickup_monday'] ? 'ja' : 'nee'" />
                 <x-metric-card label="Eetlust" :value="$bulk['appetite_score'] ?? 'n.v.t.'" />
-                <x-metric-card label="Seizoen/lang" :value="$bulk['season_target'].' / '.$bulk['long_term_target'].' kg'" />
+                @if ($player->isMuscleGain())
+                    <x-metric-card label="Seizoen/lang" :value="$bulk['season_target'].' / '.$bulk['long_term_target'].' kg'" />
+                @endif
+                @if ($player->isGuardDevelopment())
+                    <x-metric-card label="Handles" :value="$bulk['handle_minutes'] !== null ? $bulk['handle_minutes'].' min' : 'n.v.t.'" />
+                    <x-metric-card label="Handle sessies" :value="$bulk['handle_sessions'] ?? 'n.v.t.'" />
+                    <x-metric-card label="Pickups" :value="$bulk['pickup_sessions'] ?? 'n.v.t.'" />
+                    <x-metric-card label="Conditieminuten" :value="$bulk['conditioning_minutes'] !== null ? $bulk['conditioning_minutes'].' min' : 'n.v.t.'" />
+                    <x-metric-card label="Defence" :value="$bulk['defence_sessions'] ?? 'n.v.t.'" />
+                    <x-metric-card label="Calls" :value="$bulk['playbook_calls_learned'] ?? 'n.v.t.'" />
+                @endif
             </div>
+            @if ($player->isGuardDevelopment() && $bulk['handles_worked_on'])
+                <p class="mt-3 rounded-md bg-white/70 p-3 text-sm dark:bg-primary-900/60">Handles: {{ $bulk['handles_worked_on'] }}</p>
+            @endif
+            @if ($player->isGuardDevelopment() && $bulk['playbook_focus'])
+                <p class="mt-2 rounded-md bg-white/70 p-3 text-sm dark:bg-primary-900/60">Playbook: {{ $bulk['playbook_focus'] }}</p>
+            @endif
             @if ($bulk['protein_notes'])
                 <p class="mt-3 rounded-md bg-white/70 p-3 text-sm dark:bg-primary-900/60">Eiwittoelichting: {{ $bulk['protein_notes'] }}</p>
             @endif
@@ -73,12 +94,15 @@
                     <div class="rounded-md bg-primary-50 p-3 text-sm dark:bg-primary-900" wire:key="checkin-{{ $checkin->id }}">
                         <p class="font-medium">{{ $checkin->week_start_date->format('d-m-Y') }} - {{ $checkin->strength_sessions }} kracht, {{ $checkin->conditioning_sessions }} conditie, {{ $checkin->mobility_sessions }} mobiliteit</p>
                         <p class="text-zinc-600 dark:text-zinc-300">Slaap {{ $checkin->sleep_avg_hours ?? 'n.v.t.' }} uur, energie {{ $checkin->energy_score ?? 'n.v.t.' }}, pijn {{ $checkin->pain ? 'ja' : 'nee' }}, load {{ $checkin->calculated_training_load ?? 'n.v.t.' }}</p>
-                        @if ($player->isMuscleGain())
+                        @if ($player->tracksNutrition())
                             <p class="text-zinc-600 dark:text-zinc-300">Eiwit {{ ['yes' => 'ja (6-7 dagen)', 'partial' => 'soms (3-5 dagen)', 'no' => 'nee (0-2 dagen)'][$checkin->protein_status] ?? 'n.v.t.' }}@if ($checkin->protein_avg_grams !== null)
                                     , {{ $checkin->protein_avg_grams }}g/dag
                                 @endif@if ($checkin->protein_target_days !== null)
                                     , {{ $checkin->protein_target_days }}/7 dagen
                                 @endif</p>
+                        @endif
+                        @if ($player->isGuardDevelopment())
+                            <p class="text-zinc-600 dark:text-zinc-300">Handles {{ $checkin->handle_minutes ?? 'n.v.t.' }} min, pickups {{ $checkin->pickup_sessions ?? 'n.v.t.' }}, defence {{ $checkin->defence_sessions ?? 'n.v.t.' }}, calls {{ $checkin->playbook_calls_learned ?? 'n.v.t.' }}</p>
                         @endif
                         @if ($checkin->missed_target_reason)
                             <p class="mt-1 text-zinc-500">

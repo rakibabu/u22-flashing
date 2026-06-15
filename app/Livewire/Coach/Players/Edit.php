@@ -26,7 +26,7 @@ class Edit extends Component
     {
         $validated = $this->validate([
             'form.name' => ['required', 'string', 'max:255'],
-            'form.program_type' => ['required', Rule::in([Player::Conditioning, Player::MuscleGain, Player::Maintenance])],
+            'form.program_type' => ['required', Rule::in([Player::Conditioning, Player::MuscleGain, Player::Maintenance, Player::GuardDevelopment])],
             'form.age' => ['nullable', 'integer', 'between:12,40'],
             'form.height_cm' => ['nullable', 'integer', 'between:140,230'],
             'form.start_weight_kg' => ['nullable', 'numeric', 'between:40,160'],

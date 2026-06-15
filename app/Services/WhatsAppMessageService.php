@@ -16,7 +16,7 @@ class WhatsAppMessageService
             str_contains($evaluation['reason'], 'Geen check-in') || str_contains($evaluation['reason'], 'mist') => $this->checkinReminder($player),
             $evaluation['status'] === 'green' => $this->compliment($player),
             str_contains($evaluation['reason'], 'Pijn') => $this->injuryFollowUp($player, $evaluation),
-            $player->isMuscleGain() && (str_contains($evaluation['advice'], 'kcal') || str_contains($evaluation['advice'], 'eiwit')) => $this->bulkAdvice($player, $evaluation),
+            $player->tracksNutrition() && (str_contains($evaluation['advice'], 'kcal') || str_contains($evaluation['advice'], 'eiwit')) => $this->bulkAdvice($player, $evaluation),
             default => $this->trainingAdjustment($player, $evaluation),
         };
     }
@@ -44,7 +44,9 @@ class WhatsAppMessageService
      */
     public function bulkAdvice(Player $player, array $evaluation): string
     {
-        return "Hoi {$player->name}, bulk-focus voor deze week: {$evaluation['next_action']} Check elke avond rond 20:00 wat nog openstaat qua kcal en eiwit.";
+        $focus = $player->isGuardDevelopment() ? 'voeding-focus' : 'bulk-focus';
+
+        return "Hoi {$player->name}, {$focus} voor deze week: {$evaluation['next_action']} Check elke avond rond 20:00 wat nog openstaat qua kcal en eiwit.";
     }
 
     /**
