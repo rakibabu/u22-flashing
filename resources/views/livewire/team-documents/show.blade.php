@@ -1,7 +1,7 @@
 <div class="space-y-6">
     <x-page-header :title="$document->title" :description="$document->description" />
 
-    @if ($isCoach)
+    @can('manage-coach-area')
         <section class="rounded-lg border border-primary-800/10 bg-white p-4 shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
@@ -52,7 +52,7 @@
                 </div>
             @endif
         </section>
-    @endif
+    @endcan
 
     @if ($hasPdf)
         <section
@@ -107,11 +107,11 @@
         <section class="rounded-lg border border-dashed border-primary-800/20 bg-white p-6 text-center shadow-sm dark:border-flash-orange/30 dark:bg-primary-800">
             <h2 class="font-display text-2xl font-normal leading-none text-primary-900 dark:text-white">Nog geen PDF beschikbaar</h2>
             <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-                @if ($isCoach)
+                @can('manage-coach-area')
                     Er staat nog geen document klaar voor spelers.
                 @else
                     Zodra de coach het document klaarzet, kun je het hier bekijken.
-                @endif
+                @endcan
             </p>
         </section>
     @endif

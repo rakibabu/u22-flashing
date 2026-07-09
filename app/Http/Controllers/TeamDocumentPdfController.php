@@ -10,7 +10,7 @@ class TeamDocumentPdfController extends Controller
 {
     public function __invoke(TeamDocument $teamDocument): BinaryFileResponse
     {
-        abort_unless(auth()->user()?->isCoach() || auth()->user()?->isPlayer(), 403);
+        abort_unless(auth()->user()?->canAccessCoachArea() || auth()->user()?->isPlayer(), 403);
         abort_unless($teamDocument->pdf_path, 404);
         abort_unless(Storage::disk('local')->exists($teamDocument->pdf_path), 404);
 

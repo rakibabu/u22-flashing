@@ -42,6 +42,7 @@ function bindTeamDocumentExtractor(): void
 
 test('coach kan team document pdf uploaden en inhoudsopgave wordt opgeslagen', function () {
     Storage::fake('local');
+    TeamDocument::ensureDefaults();
     bindTeamDocumentExtractor();
 
     Livewire::actingAs(teamDocumentCoach())
@@ -65,6 +66,7 @@ test('coach kan team document pdf uploaden en inhoudsopgave wordt opgeslagen', f
 
 test('alleen pdf uploads worden geaccepteerd', function () {
     Storage::fake('local');
+    TeamDocument::ensureDefaults();
     bindTeamDocumentExtractor();
 
     Livewire::actingAs(teamDocumentCoach())

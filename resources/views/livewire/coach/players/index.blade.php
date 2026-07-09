@@ -1,7 +1,9 @@
 <div class="space-y-6">
     <x-page-header title="Spelers" description="Beheer programma's en invite-links.">
         <x-slot:actions>
-            <flux:button :href="route('coach.players.create')" variant="primary" wire:navigate>Speler toevoegen</flux:button>
+            @can('manage-coach-area')
+                <flux:button :href="route('coach.players.create')" variant="primary" wire:navigate>Speler toevoegen</flux:button>
+            @endcan
         </x-slot:actions>
     </x-page-header>
 
@@ -10,71 +12,80 @@
             <p class="text-xs font-semibold uppercase text-primary-700">Trainingsprogramma PDF's</p>
             <h2 class="mt-1 font-display text-3xl leading-none text-primary-900">Per trainingstype</h2>
             <p class="mt-1 max-w-2xl text-sm text-zinc-600">
-                Upload hier de PDF voor conditie, bulk/kracht, onderhoud of guard development. Spelers zien automatisch de PDF van hun eigen trainingstype.
+                @can('manage-coach-area')
+                    Upload hier de PDF voor conditie, bulk/kracht, onderhoud of guard development. Spelers zien automatisch de PDF van hun eigen trainingstype.
+                @else
+                    Bekijk hier de PDF voor conditie, bulk/kracht, onderhoud of guard development.
+                @endcan
             </p>
         </div>
 
-        @if ($missingProgramTemplateCount > 0)
-            <div class="mt-4 flex flex-col gap-3 rounded-lg border border-flash-orange/30 bg-flash-orange/10 p-3 text-primary-900 sm:flex-row sm:items-center sm:justify-between">
-                <p class="text-sm">
-                    Er ontbreken {{ $missingProgramTemplateCount }} standaard trainingstype(s).
-                </p>
-                <flux:button type="button" size="sm" variant="primary" wire:click="createDefaultProgramTemplates">
-                    Standaard programma's aanmaken
-                </flux:button>
-            </div>
-        @endif
+        @can('manage-coach-area')
+            @if ($missingProgramTemplateCount > 0)
+                <div class="mt-4 flex flex-col gap-3 rounded-lg border border-flash-orange/30 bg-flash-orange/10 p-3 text-primary-900 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-sm">
+                        Er ontbreken {{ $missingProgramTemplateCount }} standaard trainingstype(s).
+                    </p>
+                    <flux:button type="button" size="sm" variant="primary" wire:click="createDefaultProgramTemplates">
+                        Standaard programma's aanmaken
+                    </flux:button>
+                </div>
+            @endif
 
-        @if ($programTemplatesCreated)
-            <p class="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
-                Standaard programma's aangemaakt.
-            </p>
-        @endif
+            @if ($programTemplatesCreated)
+                <p class="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
+                    Standaard programma's aangemaakt.
+                </p>
+            @endif
+        @endcan
 
         <div class="mt-4 grid gap-3 md:grid-cols-3">
             @foreach ($programTemplates as $template)
-                <form
-                    method="POST"
-                    action="{{ route('coach.program-templates.pdf.store', $template) }}"
-                    enctype="multipart/form-data"
+                <article
                     class="rounded-lg border border-primary-100 bg-primary-50/50 p-3"
                     wire:key="program-template-pdf-{{ $template->id }}"
                 >
-                    @csrf
-
                     <div class="flex min-h-16 flex-col justify-between gap-1">
                         <h3 class="font-semibold text-primary-900">{{ $template->name }}</h3>
                         <p class="text-xs text-zinc-600">{{ $template->training_program_pdf_path ? 'PDF ingesteld' : 'Nog geen PDF' }}</p>
                     </div>
 
-                    <div class="mt-3 space-y-3">
-                        <label class="block text-sm font-medium text-primary-900" for="training-program-pdf-{{ $template->id }}">
-                            PDF uploaden
-                        </label>
-                        <input
-                            id="training-program-pdf-{{ $template->id }}"
-                            name="training_program_pdf"
-                            type="file"
-                            accept="application/pdf"
-                            class="block w-full rounded-md border border-primary-100 bg-white px-3 py-2 text-sm text-primary-900 file:mr-3 file:rounded-md file:border-0 file:bg-primary-100 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-primary-900"
+                    @can('manage-coach-area')
+                        <form
+                            method="POST"
+                            action="{{ route('coach.program-templates.pdf.store', $template) }}"
+                            enctype="multipart/form-data"
+                            class="mt-3 space-y-3"
                         >
+                            @csrf
 
-                        @error('training_program_pdf')
-                            <p class="text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                            <label class="block text-sm font-medium text-primary-900" for="training-program-pdf-{{ $template->id }}">
+                                PDF uploaden
+                            </label>
+                            <input
+                                id="training-program-pdf-{{ $template->id }}"
+                                name="training_program_pdf"
+                                type="file"
+                                accept="application/pdf"
+                                class="block w-full rounded-md border border-primary-100 bg-white px-3 py-2 text-sm text-primary-900 file:mr-3 file:rounded-md file:border-0 file:bg-primary-100 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-primary-900"
+                            >
 
-                        @if (session('saved_program_template_id') === $template->id)
-                            <p class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">PDF opgeslagen.</p>
-                        @endif
+                            @error('training_program_pdf')
+                                <p class="text-sm text-red-600">{{ $message }}</p>
+                            @enderror
 
-                        <div class="flex flex-wrap gap-2">
-                            <flux:button type="submit" size="sm" variant="primary">Opslaan</flux:button>
-                            @if ($template->training_program_pdf_path)
-                                <flux:button size="sm" :href="route('coach.program-templates.pdf', $template)" target="_blank">Bekijk PDF</flux:button>
+                            @if (session('saved_program_template_id') === $template->id)
+                                <p class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">PDF opgeslagen.</p>
                             @endif
-                        </div>
-                    </div>
-                </form>
+
+                            <flux:button type="submit" size="sm" variant="primary">Opslaan</flux:button>
+                        </form>
+                    @endcan
+
+                    @if ($template->training_program_pdf_path)
+                        <flux:button class="mt-3" size="sm" :href="route('coach.program-templates.pdf', $template)" target="_blank">Bekijk PDF</flux:button>
+                    @endif
+                </article>
             @endforeach
         </div>
     </section>
@@ -90,15 +101,19 @@
             </div>
 
             <div class="flex flex-wrap gap-2">
-                <flux:button wire:click="generateTeamInvite" variant="primary">Nieuwe teamlink</flux:button>
+                @can('manage-coach-area')
+                    <flux:button wire:click="generateTeamInvite" variant="primary">Nieuwe teamlink</flux:button>
+                @endcan
 
                 @if ($teamInviteLink)
                     <x-copy-button :text="$teamInviteLink" label="Kopieer link" />
                 @endif
 
-                @if ($latestTeamInvite?->usable())
-                    <flux:button wire:click="revokeTeamInvite">Intrekken</flux:button>
-                @endif
+                @can('manage-coach-area')
+                    @if ($latestTeamInvite?->usable())
+                        <flux:button wire:click="revokeTeamInvite">Intrekken</flux:button>
+                    @endif
+                @endcan
             </div>
         </div>
 
@@ -146,8 +161,10 @@
                 <div class="mt-4 flex flex-wrap gap-2">
                     <flux:button size="sm" :href="route('coach.players.show', $player)" wire:navigate>Bekijk</flux:button>
                     <flux:button size="sm" :href="route('coach.players.checkin-preview', $player)" wire:navigate>Weekcheck scherm</flux:button>
-                    <flux:button size="sm" wire:click="regenerateInvite({{ $player->id }})">Nieuwe invite</flux:button>
-                    <flux:button size="sm" variant="danger" icon="trash" wire:click="deletePlayer({{ $player->id }})" wire:confirm="Weet je zeker dat je {{ $player->name }} wilt verwijderen? Check-ins, invites, testresultaten en coach-notities van deze speler worden ook verwijderd.">Verwijder</flux:button>
+                    @can('manage-coach-area')
+                        <flux:button size="sm" wire:click="regenerateInvite({{ $player->id }})">Nieuwe invite</flux:button>
+                        <flux:button size="sm" variant="danger" icon="trash" wire:click="deletePlayer({{ $player->id }})" wire:confirm="Weet je zeker dat je {{ $player->name }} wilt verwijderen? Check-ins, invites, testresultaten en coach-notities van deze speler worden ook verwijderd.">Verwijder</flux:button>
+                    @endcan
                 </div>
             </article>
         @endforeach

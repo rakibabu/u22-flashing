@@ -26,6 +26,8 @@ class Edit extends Component
 
     public function save(): mixed
     {
+        $this->authorize('update', $this->player);
+
         $validated = $this->validate([
             'form.name' => ['required', 'string', 'max:255'],
             'form.program_type' => ['required', Rule::in([Player::Conditioning, Player::MuscleGain, Player::Maintenance, Player::GuardDevelopment])],

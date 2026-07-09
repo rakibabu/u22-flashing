@@ -79,9 +79,8 @@ class TeamDocument extends Model
     {
         abort_unless(array_key_exists($type, self::defaultRows()), 404);
 
-        self::ensureDefaults();
-
-        return self::query()->where('type', $type)->firstOrFail();
+        return self::query()->where('type', $type)->first()
+            ?? new self(['type' => $type, ...self::defaultRows()[$type]]);
     }
 
     public function getRouteKeyName(): string

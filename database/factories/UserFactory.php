@@ -53,6 +53,11 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => ['role' => 'coach']);
     }
 
+    public function coachViewer(): static
+    {
+        return $this->state(fn (array $attributes) => ['role' => 'coach_viewer']);
+    }
+
     public function player(): static
     {
         return $this->state(fn (array $attributes) => ['role' => 'player']);

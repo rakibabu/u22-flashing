@@ -1,7 +1,9 @@
 <div class="space-y-6">
     <x-page-header title="Coach dashboard" description="Flashing Heiloo U22 zomerprogramma 11 mei t/m 16 augustus, start trainingen 17 augustus.">
         <x-slot:actions>
-            <flux:button :href="route('coach.players.create')" variant="primary" wire:navigate>Speler toevoegen</flux:button>
+            @can('manage-coach-area')
+                <flux:button :href="route('coach.players.create')" variant="primary" wire:navigate>Speler toevoegen</flux:button>
+            @endcan
             <flux:button :href="route('coach.analysis-export')" wire:navigate>Analyse export</flux:button>
         </x-slot:actions>
     </x-page-header>
@@ -50,9 +52,13 @@
                     </div>
                     <div class="flex flex-wrap items-start gap-2 lg:justify-end">
                         <flux:button size="sm" :href="route('coach.players.show', $row['player'])" wire:navigate>Bekijk speler</flux:button>
-                        <flux:button size="sm" wire:click="generateAdvice({{ $row['player']->id }})">Genereer advies</flux:button>
+                        @can('manage-coach-area')
+                            <flux:button size="sm" wire:click="generateAdvice({{ $row['player']->id }})">Genereer advies</flux:button>
+                        @endcan
                         <x-copy-button size="sm" :text="$row['whatsapp']" label="Kopieer WhatsApp" />
-                        <flux:button size="sm" wire:click="markFollowedUp({{ $row['player']->id }})">{{ $row['followed_up'] ? 'Opgevolgd' : 'Markeer opgevolgd' }}</flux:button>
+                        @can('manage-coach-area')
+                            <flux:button size="sm" wire:click="markFollowedUp({{ $row['player']->id }})">{{ $row['followed_up'] ? 'Opgevolgd' : 'Markeer opgevolgd' }}</flux:button>
+                        @endcan
                     </div>
                 </article>
             @endforeach
@@ -214,7 +220,9 @@
                             <td class="px-4 py-3">
                                 <div class="flex flex-wrap gap-2">
                                     <flux:button size="sm" :href="route('coach.players.show', $row['player'])" wire:navigate>Bekijk</flux:button>
-                                    <flux:button size="sm" wire:click="generateAdvice({{ $row['player']->id }})">Advies</flux:button>
+                                    @can('manage-coach-area')
+                                        <flux:button size="sm" wire:click="generateAdvice({{ $row['player']->id }})">Advies</flux:button>
+                                    @endcan
                                     <x-copy-button size="sm" :text="$row['whatsapp']" label="WhatsApp" />
                                 </div>
                             </td>

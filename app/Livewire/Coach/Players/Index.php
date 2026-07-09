@@ -7,6 +7,7 @@ use App\Models\Player;
 use App\Models\ProgramTemplate;
 use App\Models\TeamInvite;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class Index extends Component
@@ -23,6 +24,8 @@ class Index extends Component
 
     public function generateTeamInvite(): void
     {
+        Gate::authorize('manage-coach-area');
+
         TeamInvite::query()
             ->whereNull('revoked_at')
             ->where('expires_at', '>', now())
@@ -35,6 +38,8 @@ class Index extends Component
 
     public function revokeTeamInvite(): void
     {
+        Gate::authorize('manage-coach-area');
+
         TeamInvite::query()
             ->whereNull('revoked_at')
             ->where('expires_at', '>', now())
@@ -68,7 +73,7 @@ class Index extends Component
 
     public function createDefaultProgramTemplates(): void
     {
-        $this->authorize('viewAny', Player::class);
+        Gate::authorize('manage-coach-area');
 
         ProgramTemplate::ensureDefaults();
 

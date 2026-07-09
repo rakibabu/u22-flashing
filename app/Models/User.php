@@ -51,6 +51,16 @@ class User extends Authenticatable implements PasskeyUser
         return $this->role === 'coach';
     }
 
+    public function isCoachViewer(): bool
+    {
+        return $this->role === 'coach_viewer';
+    }
+
+    public function canAccessCoachArea(): bool
+    {
+        return $this->isCoach() || $this->isCoachViewer();
+    }
+
     public function isPlayer(): bool
     {
         return $this->role === 'player';

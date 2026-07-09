@@ -6,6 +6,7 @@ use App\Models\Player;
 use App\Models\ProgramTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -31,6 +32,8 @@ class PlayerProgramPdfController extends Controller
 
     public function store(Request $request, ProgramTemplate $programTemplate): RedirectResponse
     {
+        Gate::authorize('manage-coach-area');
+
         $validated = $request->validate([
             'training_program_pdf' => ['required', 'file', 'mimes:pdf', 'max:10240'],
         ]);

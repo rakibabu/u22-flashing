@@ -25,12 +25,13 @@ class Show extends Component
         abort_unless(array_key_exists($type, TeamDocument::defaultRows()), 404);
 
         $this->type = $type;
-        TeamDocument::ensureDefaults();
     }
 
     public function save(PdfTableOfContentsExtractor $extractor): void
     {
         abort_unless(auth()->user()?->isCoach(), 403);
+
+        TeamDocument::ensureDefaults();
 
         $validated = $this->validate([
             'pdf' => ['required', File::types(['pdf'])->max(20 * 1024)],
@@ -71,12 +72,11 @@ class Show extends Component
     {
         $document = TeamDocument::findByType($this->type)->load(['sections', 'uploadedBy']);
         $hasPdf = $document->pdf_path && Storage::disk('local')->exists($document->pdf_path);
-        $routePrefix = auth()->user()?->isCoach() ? 'coach' : 'player';
+        $routePrefix = auth()->user()?->canAccessCoachArea() ? 'coach' : 'player';
 
         return view('livewire.team-documents.show', [
             'document' => $document,
             'hasPdf' => $hasPdf,
-            'isCoach' => auth()->user()?->isCoach() === true,
             'pdfUrl' => $hasPdf ? route($routePrefix.'.documents.pdf', $document, absolute: false) : null,
         ])->layout('layouts.app');
     }

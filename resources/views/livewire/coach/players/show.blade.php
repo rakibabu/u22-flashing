@@ -1,9 +1,13 @@
 <div class="space-y-6">
     <x-page-header :title="$player->name" :description="$player->programName().' - profiel, trends en advies'">
         <x-slot:actions>
-            <flux:button :href="route('coach.players.edit', $player)" wire:navigate>Bewerk</flux:button>
+            @can('manage-coach-area')
+                <flux:button :href="route('coach.players.edit', $player)" wire:navigate>Bewerk</flux:button>
+            @endcan
             <flux:button :href="route('coach.players.checkin-preview', $player)" wire:navigate>Bekijk weekcheck-scherm</flux:button>
-            <flux:button wire:click="regenerateInvite">Nieuwe invite</flux:button>
+            @can('manage-coach-area')
+                <flux:button wire:click="regenerateInvite">Nieuwe invite</flux:button>
+            @endcan
         </x-slot:actions>
     </x-page-header>
 
@@ -143,13 +147,17 @@
                     </flux:field>
                 </div>
             </div>
-            <flux:textarea wire:model="adviceBody" rows="7" class="mt-3" />
-            <label class="mt-3 flex items-center gap-2 text-sm">
-                <input type="checkbox" wire:model="visibleToPlayer" class="rounded border-zinc-300">
-                Zichtbaar maken voor speler
-            </label>
+            @can('manage-coach-area')
+                <flux:textarea wire:model="adviceBody" rows="7" class="mt-3" />
+                <label class="mt-3 flex items-center gap-2 text-sm">
+                    <input type="checkbox" wire:model="visibleToPlayer" class="rounded border-zinc-300">
+                    Zichtbaar maken voor speler
+                </label>
+            @endcan
             <div class="mt-3 flex gap-2">
-                <flux:button wire:click="saveAdvice" variant="primary">Opslaan</flux:button>
+                @can('manage-coach-area')
+                    <flux:button wire:click="saveAdvice" variant="primary">Opslaan</flux:button>
+                @endcan
                 <input readonly value="{{ $adviceBody }}" class="min-w-0 flex-1 rounded-md border border-primary-800/10 px-3 py-2 text-sm dark:border-flash-orange/20 dark:bg-primary-900">
             </div>
         </section>
@@ -159,33 +167,37 @@
         <h2 class="font-semibold">Coachnotities</h2>
         @foreach ($player->coachNotes as $note)
             <div wire:key="note-{{ $note->id }}">
-                @if ($editingNoteId === $note->id)
-                    <article class="rounded-lg border border-primary-800/10 bg-white p-4 shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
-                        <form wire:submit="updateAdvice" class="space-y-3">
-                            <flux:input wire:model="editingNoteTitle" label="Titel" />
-                            <flux:error name="editingNoteTitle" />
+                @can('manage-coach-area')
+                    @if ($editingNoteId === $note->id)
+                        <article class="rounded-lg border border-primary-800/10 bg-white p-4 shadow-sm dark:border-flash-orange/20 dark:bg-primary-800">
+                            <form wire:submit="updateAdvice" class="space-y-3">
+                                <flux:input wire:model="editingNoteTitle" label="Titel" />
+                                <flux:error name="editingNoteTitle" />
 
-                            <flux:textarea wire:model="editingNoteBody" label="Advies" rows="5" />
-                            <flux:error name="editingNoteBody" />
+                                <flux:textarea wire:model="editingNoteBody" label="Advies" rows="5" />
+                                <flux:error name="editingNoteBody" />
 
-                            <label class="flex items-center gap-2 text-sm">
-                                <input type="checkbox" wire:model="editingNoteVisibleToPlayer" class="rounded border-zinc-300">
-                                Zichtbaar voor speler
-                            </label>
+                                <label class="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" wire:model="editingNoteVisibleToPlayer" class="rounded border-zinc-300">
+                                    Zichtbaar voor speler
+                                </label>
 
-                            <div class="flex flex-wrap gap-2">
-                                <flux:button type="submit" size="sm" variant="primary" icon="check">Opslaan</flux:button>
-                                <flux:button type="button" size="sm" wire:click="cancelAdviceEdit">Annuleer</flux:button>
-                            </div>
-                        </form>
-                    </article>
+                                <div class="flex flex-wrap gap-2">
+                                    <flux:button type="submit" size="sm" variant="primary" icon="check">Opslaan</flux:button>
+                                    <flux:button type="button" size="sm" wire:click="cancelAdviceEdit">Annuleer</flux:button>
+                                </div>
+                            </form>
+                        </article>
+                    @else
+                        <x-advice-card :note="$note" />
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            <flux:button size="sm" icon="pencil-square" wire:click="editAdvice({{ $note->id }})">Bewerk</flux:button>
+                            <flux:button size="sm" variant="danger" icon="trash" wire:click="deleteAdvice({{ $note->id }})" wire:confirm="Weet je zeker dat je dit advies wilt verwijderen?">Verwijder</flux:button>
+                        </div>
+                    @endif
                 @else
                     <x-advice-card :note="$note" />
-                    <div class="mt-2 flex flex-wrap gap-2">
-                        <flux:button size="sm" icon="pencil-square" wire:click="editAdvice({{ $note->id }})">Bewerk</flux:button>
-                        <flux:button size="sm" variant="danger" icon="trash" wire:click="deleteAdvice({{ $note->id }})" wire:confirm="Weet je zeker dat je dit advies wilt verwijderen?">Verwijder</flux:button>
-                    </div>
-                @endif
+                @endcan
             </div>
         @endforeach
     </section>

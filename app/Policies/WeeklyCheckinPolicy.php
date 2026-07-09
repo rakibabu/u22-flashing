@@ -9,7 +9,7 @@ class WeeklyCheckinPolicy
 {
     public function view(User $user, WeeklyCheckin $weeklyCheckin): bool
     {
-        return $user->isCoach() || $weeklyCheckin->player->user_id === $user->id;
+        return $user->canAccessCoachArea() || $weeklyCheckin->player->user_id === $user->id;
     }
 
     public function create(User $user): bool

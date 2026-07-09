@@ -34,19 +34,19 @@ Route::post('/invite/{token}', [InviteActivationController::class, 'store'])->na
 Route::get('/activate/{token}', TeamActivation::class)->middleware('guest')->name('team-invite.show');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('dashboard', fn () => auth()->user()->isCoach()
+    Route::get('dashboard', fn () => auth()->user()->canAccessCoachArea()
         ? redirect()->route('coach.dashboard')
         : redirect()->route('player.home'))->name('dashboard');
 });
 
-Route::middleware(['auth', 'role:coach'])->prefix('coach')->name('coach.')->group(function () {
+Route::middleware(['auth', 'can:access-coach-area'])->prefix('coach')->name('coach.')->group(function () {
     Route::get('dashboard', CoachDashboard::class)->name('dashboard');
     Route::get('players', CoachPlayersIndex::class)->name('players.index');
-    Route::get('players/create', CoachPlayersCreate::class)->name('players.create');
+    Route::get('players/create', CoachPlayersCreate::class)->middleware('can:manage-coach-area')->name('players.create');
     Route::get('players/{player}', CoachPlayersShow::class)->name('players.show');
     Route::get('program-templates/{programTemplate}/pdf', [PlayerProgramPdfController::class, 'coach'])->name('program-templates.pdf');
-    Route::post('program-templates/{programTemplate}/pdf', [PlayerProgramPdfController::class, 'store'])->name('program-templates.pdf.store');
-    Route::get('players/{player}/edit', CoachPlayersEdit::class)->name('players.edit');
+    Route::post('program-templates/{programTemplate}/pdf', [PlayerProgramPdfController::class, 'store'])->middleware('can:manage-coach-area')->name('program-templates.pdf.store');
+    Route::get('players/{player}/edit', CoachPlayersEdit::class)->middleware('can:manage-coach-area')->name('players.edit');
     Route::get('players/{player}/checkin-preview', CoachPlayersCheckinPreview::class)->name('players.checkin-preview');
     Route::get('checkins', CoachCheckinsIndex::class)->name('checkins.index');
     Route::get('checkins/{weeklyCheckin}', CoachCheckinsShow::class)->name('checkins.show');

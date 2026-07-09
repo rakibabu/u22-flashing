@@ -1,20 +1,22 @@
 <div class="space-y-6">
     <x-page-header title="Testresultaten" description="Voeg basistests toe en vergelijk later per speler." />
 
-    <form wire:submit="save" class="u22-form-card grid gap-4 md:grid-cols-3">
-        <flux:select wire:model="form.player_id" label="Speler">
-            <flux:select.option value="">Kies speler</flux:select.option>
-            @foreach ($players as $player)
-                <flux:select.option value="{{ $player->id }}">{{ $player->name }}</flux:select.option>
-            @endforeach
-        </flux:select>
-        <flux:input wire:model="form.test_date" type="date" label="Datum" />
-        <flux:input wire:model="form.body_weight_kg" type="number" step="0.1" label="Body weight" />
-        <flux:input wire:model="form.sprint_20m_seconds" type="number" step="0.01" label="20m sprint" />
-        <flux:input wire:model="form.five_min_run_meters" type="number" label="5-min run meters" />
-        <flux:input wire:model="form.notes" label="Notities" />
-        <div class="md:col-span-3"><flux:button type="submit" variant="primary">Opslaan</flux:button></div>
-    </form>
+    @can('manage-coach-area')
+        <form wire:submit="save" class="u22-form-card grid gap-4 md:grid-cols-3">
+            <flux:select wire:model="form.player_id" label="Speler">
+                <flux:select.option value="">Kies speler</flux:select.option>
+                @foreach ($players as $player)
+                    <flux:select.option value="{{ $player->id }}">{{ $player->name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+            <flux:input wire:model="form.test_date" type="date" label="Datum" />
+            <flux:input wire:model="form.body_weight_kg" type="number" step="0.1" label="Body weight" />
+            <flux:input wire:model="form.sprint_20m_seconds" type="number" step="0.01" label="20m sprint" />
+            <flux:input wire:model="form.five_min_run_meters" type="number" label="5-min run meters" />
+            <flux:input wire:model="form.notes" label="Notities" />
+            <div class="md:col-span-3"><flux:button type="submit" variant="primary">Opslaan</flux:button></div>
+        </form>
+    @endcan
 
     <div class="grid gap-3 md:grid-cols-2">
         @foreach ($results as $result)
