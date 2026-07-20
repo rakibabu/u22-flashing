@@ -1,6 +1,7 @@
 <?php
 
 use App\Contracts\BasketballTrainerClient;
+use App\Enums\BasketballTrainerEmbedView;
 use App\Exceptions\BasketballTrainerException;
 use App\Livewire\TeamDocuments\Show;
 use App\Models\BasketballTrainerPlaybookLink;
@@ -88,6 +89,7 @@ function bindBasketballTrainerClient(
             string $playbookHash,
             string $locale = 'nl',
             string $theme = 'system',
+            BasketballTrainerEmbedView $view = BasketballTrainerEmbedView::Inline,
         ): array {
             $this->throwWhenUnavailable();
 
@@ -245,6 +247,28 @@ test('HTTP client gebruikt bearer authenticatie en versie 1 contract', function 
 
     Http::assertSent(fn ($request): bool => $request->url() === 'https://trainer.example/api/integrations/v1/playbooks'
         && $request->hasHeader('Authorization', 'Bearer u22-secret-token'));
+});
+
+test('HTTP client vraagt standaard de compacte embedweergave aan', function () {
+    config()->set('services.basketball_trainer.url', 'https://trainer.example');
+    config()->set('services.basketball_trainer.token', 'u22-secret-token');
+    Http::fake([
+        'https://trainer.example/api/integrations/v1/playbooks/playbook-demo/embed-session' => Http::response([
+            'data' => [
+                'url' => 'https://trainer.example/embed/u22/playbook-demo',
+                'expires_at' => '2026-07-20T10:15:00+00:00',
+            ],
+        ]),
+    ]);
+
+    (new HttpBasketballTrainerClient)->createEmbedSession('playbook-demo');
+
+    Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+        && $request->data() === [
+            'locale' => 'nl',
+            'theme' => 'system',
+            'view' => 'inline',
+        ]);
 });
 
 test('HTTP client vertaalt geweigerde tokens naar een veilige domeinfout', function () {

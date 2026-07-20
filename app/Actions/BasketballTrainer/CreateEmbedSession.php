@@ -3,6 +3,7 @@
 namespace App\Actions\BasketballTrainer;
 
 use App\Contracts\BasketballTrainerClient;
+use App\Enums\BasketballTrainerEmbedView;
 use App\Exceptions\BasketballTrainerException;
 use App\Models\BasketballTrainerPlaybookLink;
 
@@ -20,6 +21,7 @@ class CreateEmbedSession
                 $link->external_playbook_hash,
                 'nl',
                 $theme,
+                BasketballTrainerEmbedView::Inline,
             );
         } catch (BasketballTrainerException $exception) {
             $link->update([

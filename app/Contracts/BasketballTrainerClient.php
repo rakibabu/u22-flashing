@@ -2,6 +2,8 @@
 
 namespace App\Contracts;
 
+use App\Enums\BasketballTrainerEmbedView;
+
 interface BasketballTrainerClient
 {
     /** @return list<array<string, mixed>> */
@@ -15,5 +17,6 @@ interface BasketballTrainerClient
         string $playbookHash,
         string $locale = 'nl',
         string $theme = 'system',
+        BasketballTrainerEmbedView $view = BasketballTrainerEmbedView::Inline,
     ): array;
 }

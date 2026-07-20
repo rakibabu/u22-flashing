@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Contracts\BasketballTrainerClient;
+use App\Enums\BasketballTrainerEmbedView;
 use App\Exceptions\BasketballTrainerException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
@@ -57,11 +58,16 @@ class HttpBasketballTrainerClient implements BasketballTrainerClient
         string $playbookHash,
         string $locale = 'nl',
         string $theme = 'system',
+        BasketballTrainerEmbedView $view = BasketballTrainerEmbedView::Inline,
     ): array {
         $data = $this->request(
             'post',
             'api/integrations/v1/playbooks/'.rawurlencode($playbookHash).'/embed-session',
-            compact('locale', 'theme'),
+            [
+                'locale' => $locale,
+                'theme' => $theme,
+                'view' => $view->value,
+            ],
         );
 
         if (
