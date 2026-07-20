@@ -46,6 +46,11 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(TeamInvite::class, 'created_by_user_id');
     }
 
+    public function linkedBasketballTrainerPlaybooks(): HasMany
+    {
+        return $this->hasMany(BasketballTrainerPlaybookLink::class, 'linked_by_user_id');
+    }
+
     public function isCoach(): bool
     {
         return $this->role === 'coach';

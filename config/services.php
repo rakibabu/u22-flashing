@@ -39,4 +39,11 @@ return [
         'binary' => env('PDFTOTEXT_BINARY'),
     ],
 
+    'basketball_trainer' => [
+        'url' => env('BASKETBALL_TRAINER_URL', 'http://localhost:8001'),
+        'token' => env('BASKETBALL_TRAINER_TOKEN'),
+        'connect_timeout' => (int) env('BASKETBALL_TRAINER_CONNECT_TIMEOUT', 2),
+        'timeout' => (int) env('BASKETBALL_TRAINER_TIMEOUT', 5),
+    ],
+
 ];

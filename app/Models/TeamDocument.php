@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['type', 'title', 'description', 'pdf_path', 'original_filename', 'uploaded_by_user_id', 'uploaded_at', 'toc_status', 'toc_error'])]
 #[UseFactory(TeamDocumentFactory::class)]
@@ -106,5 +107,10 @@ class TeamDocument extends Model
     public function sections(): HasMany
     {
         return $this->hasMany(TeamDocumentSection::class)->orderBy('sort_order');
+    }
+
+    public function basketballTrainerPlaybookLink(): HasOne
+    {
+        return $this->hasOne(BasketballTrainerPlaybookLink::class);
     }
 }
