@@ -1,19 +1,27 @@
 <?php
 
+use App\Http\Controllers\Coach\ExerciseLibraryTransferController;
+use App\Http\Controllers\ExerciseLibraryMediaController;
 use App\Http\Controllers\InviteActivationController;
 use App\Http\Controllers\PlayerProgramPdfController;
 use App\Http\Controllers\TeamDocumentPdfController;
+use App\Http\Controllers\TrainingOfflineSyncController;
 use App\Livewire\Coach\Advice\Index as CoachAdviceIndex;
 use App\Livewire\Coach\AnalysisExport;
 use App\Livewire\Coach\Checkins\Index as CoachCheckinsIndex;
 use App\Livewire\Coach\Checkins\Show as CoachCheckinsShow;
 use App\Livewire\Coach\Dashboard as CoachDashboard;
+use App\Livewire\Coach\Exercises\Index as CoachExercisesIndex;
 use App\Livewire\Coach\Players\CheckinPreview as CoachPlayersCheckinPreview;
 use App\Livewire\Coach\Players\Create as CoachPlayersCreate;
 use App\Livewire\Coach\Players\Edit as CoachPlayersEdit;
 use App\Livewire\Coach\Players\Index as CoachPlayersIndex;
 use App\Livewire\Coach\Players\Show as CoachPlayersShow;
 use App\Livewire\Coach\Tests\Index as CoachTestsIndex;
+use App\Livewire\Coach\Trainings\Builder as TrainingBuilder;
+use App\Livewire\Coach\Trainings\Index as TrainingIndex;
+use App\Livewire\Coach\Trainings\Review as TrainingReview;
+use App\Livewire\Coach\Trainings\Run as TrainingRun;
 use App\Livewire\Player\Advice as PlayerAdvice;
 use App\Livewire\Player\Checkin as PlayerCheckin;
 use App\Livewire\Player\Home as PlayerHome;
@@ -55,6 +63,16 @@ Route::middleware(['auth', 'can:access-coach-area'])->prefix('coach')->name('coa
     Route::get('documents/{type}', TeamDocumentShow::class)->name('documents.show');
     Route::get('documents/{teamDocument}/pdf', TeamDocumentPdfController::class)->name('documents.pdf');
     Route::get('analysis-export', AnalysisExport::class)->name('analysis-export');
+    Route::get('oefeningen', CoachExercisesIndex::class)->name('exercises.index');
+    Route::get('oefeningen/export', [ExerciseLibraryTransferController::class, 'export'])->name('exercises.export');
+    Route::post('oefeningen/import', [ExerciseLibraryTransferController::class, 'import'])->middleware('can:manage-coach-area')->name('exercises.import');
+    Route::get('oefeningen/{exercise}/media', ExerciseLibraryMediaController::class)->name('exercises.media');
+    Route::get('trainingen', TrainingIndex::class)->name('trainings.index');
+    Route::get('trainingen/nieuw', TrainingBuilder::class)->middleware('can:create,App\\Models\\TrainingSession')->name('trainings.create');
+    Route::get('trainingen/{training}/bewerken', TrainingBuilder::class)->name('trainings.edit');
+    Route::get('trainingen/{training}/uitvoeren', TrainingRun::class)->middleware('can:update,training')->name('trainings.run');
+    Route::get('trainingen/{training}/evalueren', TrainingReview::class)->name('trainings.review');
+    Route::post('training-runs/{trainingRun}/offline-events', TrainingOfflineSyncController::class)->name('training-runs.offline-events');
     Route::get('analysis-export.csv', function (Request $request, PlayerAdviceService $adviceService) {
         $weekInput = $request->query('week');
         $weekStart = $adviceService->normalizeWeekStart(is_string($weekInput) && $weekInput !== '' ? $weekInput : now()->startOfWeek()->subWeek());

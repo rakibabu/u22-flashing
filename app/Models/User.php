@@ -51,6 +51,16 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(BasketballTrainerPlaybookLink::class, 'linked_by_user_id');
     }
 
+    public function trainingSessions(): HasMany
+    {
+        return $this->hasMany(TrainingSession::class, 'created_by');
+    }
+
+    public function startedTrainingRuns(): HasMany
+    {
+        return $this->hasMany(TrainingRun::class, 'started_by');
+    }
+
     public function isCoach(): bool
     {
         return $this->role === 'coach';

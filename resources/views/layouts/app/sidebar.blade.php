@@ -17,6 +17,8 @@
                     </flux:sidebar.item>
                     @if (auth()->user()->canAccessCoachArea())
                         <flux:sidebar.item icon="users" :href="route('coach.players.index')" :current="request()->routeIs('coach.players.*')" wire:navigate>Spelers</flux:sidebar.item>
+                        <flux:sidebar.item icon="calendar-days" :href="route('coach.trainings.index')" :current="request()->routeIs('coach.trainings.*')" wire:navigate>Trainingen</flux:sidebar.item>
+                        <flux:sidebar.item icon="rectangle-stack" :href="route('coach.exercises.index')" :current="request()->routeIs('coach.exercises.*')" wire:navigate>Oefeningen</flux:sidebar.item>
                         <flux:sidebar.item icon="clipboard-document-check" :href="route('coach.checkins.index')" :current="request()->routeIs('coach.checkins.*')" wire:navigate>Check-ins</flux:sidebar.item>
                         <flux:sidebar.item icon="chart-bar" :href="route('coach.tests.index')" :current="request()->routeIs('coach.tests.*')" wire:navigate>Tests</flux:sidebar.item>
                         <flux:sidebar.item icon="chat-bubble-left-right" :href="route('coach.advice.index')" :current="request()->routeIs('coach.advice.*')" wire:navigate>Advies</flux:sidebar.item>

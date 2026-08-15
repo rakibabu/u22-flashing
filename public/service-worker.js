@@ -1,0 +1,5 @@
+const CACHE = 'flashing-static-v3';
+const STATIC = ['/offline.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(STATIC))));
+self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+self.addEventListener('fetch', event => { if (event.request.method !== 'GET') return; if (event.request.mode === 'navigate') { event.respondWith(fetch(event.request).catch(() => caches.match('/offline.html'))); return; } const url = new URL(event.request.url); if (url.origin !== location.origin || !['style', 'script', 'image', 'font'].includes(event.request.destination)) return; event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request).then(response => { const copy = response.clone(); caches.open(CACHE).then(cache => cache.put(event.request, copy)); return response; }))); });

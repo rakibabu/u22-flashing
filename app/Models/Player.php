@@ -77,6 +77,11 @@ class Player extends Model
         return $this->hasMany(CoachNote::class);
     }
 
+    public function trainingAttendances(): HasMany
+    {
+        return $this->hasMany(TrainingAttendance::class);
+    }
+
     public function latestInvite(): HasOne
     {
         return $this->hasOne(Invite::class)->latestOfMany();

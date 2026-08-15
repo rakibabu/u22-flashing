@@ -17,7 +17,7 @@ class Program extends Component
         return view('livewire.player.program', [
             'player' => $player,
             'template' => $template,
-            'exercises' => ExerciseLibraryItem::query()->orderBy('sort_order')->get()->groupBy('category'),
+            'exercises' => ExerciseLibraryItem::query()->active()->whereIn('scope', ['individual', 'both'])->orderBy('sort_order')->get()->groupBy('category'),
             'hasTrainingProgramPdf' => $template?->training_program_pdf_path
                 && Storage::disk('local')->exists($template->training_program_pdf_path),
         ])->layout('layouts.app');
