@@ -27,7 +27,7 @@
         let training, progress, now=Date.now();
         const open=()=>new Promise((resolve,reject)=>{const req=indexedDB.open(DB,3);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains('trainings'))db.createObjectStore('trainings',{keyPath:'id'});if(!db.objectStoreNames.contains('events'))db.createObjectStore('events',{keyPath:'uuid'});if(!db.objectStoreNames.contains('progress'))db.createObjectStore('progress',{keyPath:'training_id'})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
         const read=async(store,key)=>{const db=await open();return new Promise(resolve=>{const req=db.transaction(store).objectStore(store).get(key);req.onsuccess=()=>resolve(req.result)})};
-        const write=async(store,value)=>{const db=await open();db.transaction(store,'readwrite').objectStore(store).put(value)};
+        const write=async(store,value)=>{const db=await open(),transaction=db.transaction(store,'readwrite');return new Promise((resolve,reject)=>{transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error);transaction.objectStore(store).put(value)})};
         const events=async()=>{const db=await open();return new Promise(resolve=>{const req=db.transaction('events').objectStore('events').getAll();req.onsuccess=()=>resolve(req.result.filter(event=>event.training_id===training.id))})};
         const elapsed=(start,pausedAt,paused,total=0)=>Math.max(0,Math.floor(((paused?new Date(pausedAt):new Date(now))-new Date(start))/1000)-total);
         const format=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;

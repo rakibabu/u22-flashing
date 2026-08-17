@@ -28,11 +28,46 @@ function database() {
 async function put(storeName, value) {
     const db = await database();
     const transaction = db.transaction(storeName, 'readwrite');
-    transaction.objectStore(storeName).put(value);
+
+    return new Promise((resolve, reject) => {
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+        transaction.objectStore(storeName).put(value);
+    });
+}
+
+async function get(storeName, key) {
+    const db = await database();
+    const transaction = db.transaction(storeName, 'readonly');
+
+    return new Promise((resolve, reject) => {
+        const request = transaction.objectStore(storeName).get(key);
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function ensureOfflinePageIsReady() {
+    if (! ('serviceWorker' in navigator)) {
+        throw new Error('Deze browser ondersteunt geen offline trainingen.');
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+
+    if (! registration.active) {
+        throw new Error('De offline pagina is nog niet beschikbaar.');
+    }
 }
 
 window.trainingOffline = {
     async saveTraining(training) {
+        if (! ('indexedDB' in window)) {
+            throw new Error('Browseropslag is niet beschikbaar.');
+        }
+
+        await ensureOfflinePageIsReady();
         await put('trainings', training);
         await put('progress', {
             training_id: training.id,
@@ -47,6 +82,9 @@ window.trainingOffline = {
 
         window.dispatchEvent(new CustomEvent('training-offline-saved'));
     },
+    async hasTraining(trainingId) {
+        return Boolean(await get('trainings', trainingId));
+    },
 };
 
 window.trainingTimer = (config) => ({
@@ -54,12 +92,18 @@ window.trainingTimer = (config) => ({
     online: navigator.onLine,
     now: Date.now(),
     offlineSaved: false,
-    init() {
+    async init() {
         setInterval(() => { this.now = Date.now(); }, 1000);
         addEventListener('online', () => { this.online = true; });
         addEventListener('offline', () => { this.online = false; });
         addEventListener('training-offline-saved', () => { this.offlineSaved = true; });
         navigator.wakeLock?.request('screen').catch(() => {});
+
+        try {
+            this.offlineSaved = await window.trainingOffline.hasTraining(this.trainingId);
+        } catch (error) {
+            console.error('Beschikbaarheid van offline training controleren mislukt.', error);
+        }
     },
     reset(config) {
         Object.assign(this, config);

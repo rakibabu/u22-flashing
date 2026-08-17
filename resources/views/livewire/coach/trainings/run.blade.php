@@ -1,6 +1,6 @@
 <div
     class="mx-auto max-w-2xl pb-44"
-    x-data="trainingTimer({ startedAt: '{{ $blockRun->started_at?->toIso8601String() }}', pausedAt: '{{ $run->paused_at?->toIso8601String() }}', paused: @js($run->status->value === 'paused'), added: {{ $blockRun->added_duration_seconds }}, planned: {{ $block->planned_duration_minutes * 60 }}, totalStarted: '{{ $run->started_at->toIso8601String() }}', totalPaused: {{ $run->total_paused_seconds }} })"
+    x-data="trainingTimer({ trainingId: {{ $training->id }}, startedAt: '{{ $blockRun->started_at?->toIso8601String() }}', pausedAt: '{{ $run->paused_at?->toIso8601String() }}', paused: @js($run->status->value === 'paused'), added: {{ $blockRun->added_duration_seconds }}, planned: {{ $block->planned_duration_minutes * 60 }}, totalStarted: '{{ $run->started_at->toIso8601String() }}', totalPaused: {{ $run->total_paused_seconds }} })"
     x-on:training-block-changed.window="reset($event.detail.timer)"
 >
     <div class="rounded-b-xl bg-primary-800 p-4 text-white">
@@ -59,7 +59,7 @@
                 <flux:button size="sm" class="min-w-0 w-full" wire:click="next">Volgende</flux:button>
             </div>
 
-            <div x-data="{ additionalControlsOpen: false, offlineTraining: @js($offlineTraining) }" class="space-y-2">
+            <div x-data="{ additionalControlsOpen: false, offlineTraining: @js($offlineTraining), offlineSaving: false, offlineError: '' }" class="space-y-2">
                 <flux:button
                     size="sm"
                     variant="subtle"
@@ -82,12 +82,19 @@
                         <flux:button size="sm" wire:click="saveNote">Opslaan</flux:button>
                     </div>
 
-                    <flux:button size="sm" class="w-full" x-on:click="trainingOffline.saveTraining(offlineTraining)" x-show="!offlineSaved">
+                    <flux:button
+                        size="sm"
+                        class="w-full"
+                        x-show="!offlineSaved"
+                        x-bind:disabled="offlineSaving"
+                        x-on:click="offlineSaving = true; offlineError = ''; try { await trainingOffline.saveTraining(offlineTraining); } catch (error) { offlineError = 'Offline opslaan lukt niet op dit toestel. Controleer of browseropslag is toegestaan.'; console.error('Training offline opslaan mislukt.', error); } finally { offlineSaving = false; }"
+                    >
                         Maak offline beschikbaar
                     </flux:button>
                     <p x-show="offlineSaved" x-cloak class="text-center text-sm font-medium text-emerald-700 dark:text-emerald-300">
                         Offline klaar op dit toestel
                     </p>
+                    <p x-show="offlineError" x-cloak class="text-center text-sm font-medium text-red-700 dark:text-red-300" x-text="offlineError"></p>
                 </div>
             </div>
         </div>

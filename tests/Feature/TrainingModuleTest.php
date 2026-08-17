@@ -170,6 +170,9 @@ test('training run renders valid offline training data for Alpine', function () 
         ->assertSee('Meer acties')
         ->assertSee('additionalControlsOpen', false)
         ->assertSee('trainingOffline.saveTraining(offlineTraining)', false)
+        ->assertSee('trainingId:', false)
+        ->assertSee('offlineSaving', false)
+        ->assertSee('Offline opslaan lukt niet op dit toestel.', false)
         ->assertDontSee('@js(', false);
 });
 
