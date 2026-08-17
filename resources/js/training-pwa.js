@@ -67,10 +67,12 @@ window.trainingOffline = {
             throw new Error('Browseropslag is niet beschikbaar.');
         }
 
+        const offlineTraining = JSON.parse(JSON.stringify(training));
+
         await ensureOfflinePageIsReady();
-        await put('trainings', training);
+        await put('trainings', offlineTraining);
         await put('progress', {
-            training_id: training.id,
+            training_id: offlineTraining.id,
             current_index: 0,
             started_at: new Date().toISOString(),
             paused_at: null,
