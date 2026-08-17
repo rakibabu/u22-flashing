@@ -9,6 +9,7 @@ use App\Enums\TrainingCoach;
 use App\Enums\TrainingStatus;
 use App\Models\ExerciseLibraryItem;
 use App\Models\TrainingSession;
+use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\URL;
 use Livewire\Component;
@@ -45,7 +46,7 @@ class Builder extends Component
         $this->training = $training ?? new TrainingSession;
         if ($training?->exists) {
             $this->title = $training->title;
-            $this->scheduledAt = $training->scheduled_at?->format('Y-m-d\\TH:i') ?? '';
+            $this->scheduledAt = $training->scheduled_at?->timezone('Europe/Amsterdam')->format('Y-m-d\\TH:i') ?? '';
             $this->plannedDuration = $training->planned_duration_minutes;
             $this->expectedPlayers = $training->expected_player_count;
             $this->availableBaskets = $training->available_baskets;
@@ -58,8 +59,9 @@ class Builder extends Component
     public function save(bool $publish = false): void
     {
         $this->authorize($this->training->exists ? 'update' : 'create', $this->training->exists ? $this->training : TrainingSession::class);
-        $data = $this->validate(['title' => ['required', 'string', 'max:255'], 'scheduledAt' => ['nullable', 'date'], 'plannedDuration' => ['required', 'integer', 'min:1', 'max:600'], 'expectedPlayers' => ['nullable', 'integer', 'min:1', 'max:99'], 'availableBaskets' => ['nullable', 'integer', 'min:0', 'max:20'], 'theme' => ['nullable', 'string', 'max:255'], 'goals' => ['nullable', 'string'], 'coachNotes' => ['nullable', 'string']]);
-        $this->training->fill(['created_by' => $this->training->created_by ?: auth()->id(), 'title' => $data['title'], 'scheduled_at' => $data['scheduledAt'] ?: null, 'planned_duration_minutes' => $data['plannedDuration'], 'expected_player_count' => $data['expectedPlayers'], 'available_baskets' => $data['availableBaskets'], 'theme' => $data['theme'] ?: null, 'goals' => $data['goals'] ?: null, 'coach_notes' => $data['coachNotes'] ?: null, 'status' => $publish ? TrainingStatus::Published : ($this->training->status ?? TrainingStatus::Draft), 'published_at' => $publish ? now() : $this->training->published_at]);
+        $data = $this->validate(['title' => ['required', 'string', 'max:255'], 'scheduledAt' => ['nullable', 'date_format:Y-m-d\\TH:i'], 'plannedDuration' => ['required', 'integer', 'min:1', 'max:600'], 'expectedPlayers' => ['nullable', 'integer', 'min:1', 'max:99'], 'availableBaskets' => ['nullable', 'integer', 'min:0', 'max:20'], 'theme' => ['nullable', 'string', 'max:255'], 'goals' => ['nullable', 'string'], 'coachNotes' => ['nullable', 'string']]);
+        $scheduledAt = $data['scheduledAt'] ? Carbon::createFromFormat('Y-m-d\\TH:i', $data['scheduledAt'], 'Europe/Amsterdam')->utc() : null;
+        $this->training->fill(['created_by' => $this->training->created_by ?: auth()->id(), 'title' => $data['title'], 'scheduled_at' => $scheduledAt, 'planned_duration_minutes' => $data['plannedDuration'], 'expected_player_count' => $data['expectedPlayers'], 'available_baskets' => $data['availableBaskets'], 'theme' => $data['theme'] ?: null, 'goals' => $data['goals'] ?: null, 'coach_notes' => $data['coachNotes'] ?: null, 'status' => $publish ? TrainingStatus::Published : ($this->training->status ?? TrainingStatus::Draft), 'published_at' => $publish ? now() : $this->training->published_at]);
         $this->training->save();
         $this->redirectRoute('coach.trainings.edit', $this->training, navigate: true);
     }

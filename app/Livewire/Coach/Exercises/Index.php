@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Coach\Exercises;
 
+use App\Actions\Training\SyncExerciseSnapshots;
 use App\Enums\ExerciseScope;
 use App\Models\ExerciseLibraryItem;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -98,7 +99,7 @@ class Index extends Component
         $this->externalUrl = $exercise->external_url ?? '';
     }
 
-    public function save(): void
+    public function save(SyncExerciseSnapshots $syncExerciseSnapshots): void
     {
         $this->authorize('create', ExerciseLibraryItem::class);
         $data = $this->validate(['name' => ['required', 'string', 'max:255'], 'formCategory' => ['required', 'string', 'max:255'], 'description' => ['required', 'string'], 'execution' => ['required', 'string'], 'coachingCues' => ['nullable', 'string'], 'scope' => ['required', 'in:individual,team,both'], 'objective' => ['nullable', 'string'], 'organization' => ['nullable', 'string'], 'duration' => ['required', 'integer', 'min:1', 'max:360'], 'minPlayers' => ['nullable', 'integer', 'min:1', 'max:99'], 'maxPlayers' => ['nullable', 'integer', 'min:1', 'max:99', 'gte:minPlayers'], 'baskets' => ['nullable', 'integer', 'min:0', 'max:20'], 'intensity' => ['nullable', 'string', 'max:50'], 'videoUrl' => ['nullable', 'url:https', 'max:2048'], 'externalUrl' => ['nullable', 'url:https', 'max:2048'], 'media' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:10240']]);
@@ -111,6 +112,7 @@ class Index extends Component
             $data['media_type'] = $this->media->getMimeType();
         }
         $exercise->fill(['name' => $data['name'], 'category' => $data['formCategory'], 'description' => $data['description'], 'execution' => $data['execution'], 'coaching_cues' => $data['coachingCues'] ?? '', 'scope' => ExerciseScope::from($data['scope']), 'objective' => $data['objective'] ?: null, 'organization' => $data['organization'] ?: null, 'default_duration_minutes' => $data['duration'], 'min_players' => $data['minPlayers'], 'max_players' => $data['maxPlayers'], 'baskets_required' => $data['baskets'], 'intensity' => $data['intensity'] ?: null, 'coaching_points' => $this->lines($this->coachingPoints), 'constraints' => $this->lines($this->constraints), 'tags' => $this->csv($this->tags), 'coach_notes' => $this->coachNotes ?: null, 'video_url' => $data['videoUrl'] ?: null, 'external_url' => $data['externalUrl'] ?: null, ...collect($data)->only(['media_path', 'media_type'])->all()])->save();
+        $syncExerciseSnapshots->handle($exercise);
         $this->resetForm();
         $this->search = '';
         $this->showForm = false;

@@ -5,7 +5,7 @@
 
     <form wire:submit="save" class="grid gap-4 rounded-xl border border-primary-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 md:grid-cols-2">
         <flux:field><flux:label>Titel</flux:label><flux:input wire:model="title" /></flux:field>
-        <flux:field><flux:label>Datum en starttijd</flux:label><flux:input type="datetime-local" wire:model="scheduledAt" /></flux:field>
+        <flux:field><flux:label>Datum en starttijd</flux:label><flux:input type="datetime-local" wire:model.live="scheduledAt" /><flux:error name="scheduledAt" /></flux:field>
         <flux:field><flux:label>Geplande duur (min.)</flux:label><flux:input type="number" min="1" wire:model="plannedDuration" /></flux:field>
         <flux:field><flux:label>Verwacht aantal spelers</flux:label><flux:input type="number" min="1" wire:model="expectedPlayers" /></flux:field>
         <flux:field><flux:label>Beschikbare baskets</flux:label><flux:input type="number" min="0" wire:model="availableBaskets" /></flux:field>

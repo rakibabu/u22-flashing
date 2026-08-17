@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
-test('coach can build training blocks from immutable exercise snapshots', function () {
+test('updating an exercise refreshes its content in future training blocks', function () {
     $coach = User::factory()->coach()->create();
     $exercise = ExerciseLibraryItem::factory()->create(['name' => 'Closeout', 'coaching_points' => ['Onder controle']]);
     $training = TrainingSession::factory()->create(['created_by' => $coach->id]);
@@ -26,16 +26,49 @@ test('coach can build training blocks from immutable exercise snapshots', functi
         ->call('addExercise', $exercise->id);
 
     $block = $training->blocks()->firstOrFail();
-    $exercise->update(['name' => 'Aangepast']);
+    $block->update(['title' => 'Eigen bloktitel', 'assigned_coach' => 'Tim', 'planned_duration_minutes' => 15]);
 
-    expect($block->exercise_snapshot['name'])->toBe('Closeout')
-        ->and($block->exercise_snapshot['coaching_points'])->toBe(['Onder controle'])
-        ->and($block->assigned_coach->value)->toBe('Raki');
+    Livewire::actingAs($coach)->test(ExerciseIndex::class)
+        ->call('edit', $exercise->id)
+        ->set('name', 'Aangepaste closeout')
+        ->set('execution', 'Sluit uit met gecontroleerde stappen.')
+        ->call('save')
+        ->assertHasNoErrors();
 
-    Livewire::actingAs($coach)->test(Builder::class, ['training' => $training])
-        ->call('updateBlock', $block->id, 'assigned_coach', 'Tim');
+    expect($block->fresh()->exercise_snapshot['name'])->toBe('Aangepaste closeout')
+        ->and($block->fresh()->exercise_snapshot['execution'])->toBe('Sluit uit met gecontroleerde stappen.')
+        ->and($block->fresh()->title)->toBe('Eigen bloktitel')
+        ->and($block->fresh()->assigned_coach->value)->toBe('Tim')
+        ->and($block->fresh()->planned_duration_minutes)->toBe(15);
+});
 
-    expect($block->fresh()->assigned_coach->value)->toBe('Tim');
+test('updating an exercise does not change an in-progress training', function () {
+    $coach = User::factory()->coach()->create();
+    $exercise = ExerciseLibraryItem::factory()->create(['name' => 'Closeout']);
+    $training = TrainingSession::factory()->create(['created_by' => $coach->id, 'status' => TrainingStatus::InProgress]);
+    $block = $training->blocks()->create(['exercise_library_item_id' => $exercise->id, 'block_type' => 'exercise', 'position' => 1, 'title' => $exercise->name, 'assigned_coach' => 'Raki', 'planned_duration_minutes' => 10, 'exercise_snapshot' => ['name' => $exercise->name]]);
+
+    Livewire::actingAs($coach)->test(ExerciseIndex::class)
+        ->call('edit', $exercise->id)
+        ->set('name', 'Aangepaste closeout')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($block->fresh()->exercise_snapshot['name'])->toBe('Closeout');
+});
+
+test('coach saves a training date in Amsterdam time', function () {
+    $coach = User::factory()->coach()->create();
+    $training = TrainingSession::factory()->create(['created_by' => $coach->id, 'scheduled_at' => null]);
+
+    Livewire::actingAs($coach)
+        ->test(Builder::class, ['training' => $training])
+        ->set('scheduledAt', '2026-09-14T19:30')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($training->fresh()->scheduled_at?->utc()->format('Y-m-d H:i'))->toBe('2026-09-14 17:30')
+        ->and($training->fresh()->scheduled_at?->timezone('Europe/Amsterdam')->format('Y-m-d H:i'))->toBe('2026-09-14 19:30');
 });
 
 test('coach can open the empty new exercise form', function () {
