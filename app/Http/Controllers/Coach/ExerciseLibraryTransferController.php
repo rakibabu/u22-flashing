@@ -7,6 +7,8 @@ use App\Actions\ExerciseLibrary\ImportExerciseLibrary;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ImportExerciseLibraryRequest;
 use App\Models\ExerciseLibraryItem;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ExerciseLibraryTransferController extends Controller
@@ -22,9 +24,13 @@ class ExerciseLibraryTransferController extends Controller
         ])->deleteFileAfterSend();
     }
 
-    public function import(ImportExerciseLibraryRequest $request, ImportExerciseLibrary $importExerciseLibrary)
+    public function import(ImportExerciseLibraryRequest $request, ImportExerciseLibrary $importExerciseLibrary): RedirectResponse
     {
-        $count = $importExerciseLibrary->handle($request->file('archive'), $request->user());
+        try {
+            $count = $importExerciseLibrary->handle($request->file('archive'), $request->user());
+        } catch (ValidationException $exception) {
+            return to_route('coach.exercises.index')->with('exercise-import-error', $exception->errors()['archive'][0] ?? 'De oefeningen konden niet worden geïmporteerd.');
+        }
 
         return to_route('coach.exercises.index')->with('exercise-imported', trans_choice('{1} 1 oefening geïmporteerd.|[2,*] :count oefeningen geïmporteerd.', $count));
     }

@@ -91,6 +91,10 @@ class ImportExerciseLibrary
      */
     private function validatedRecords(array $manifest, ZipArchive $archive): array
     {
+        if ($manifest['exercises'] === []) {
+            throw ValidationException::withMessages(['archive' => 'Dit archief bevat geen oefeningen. Exporteer de actieve oefeningen opnieuw vanuit je lokale omgeving.']);
+        }
+
         if (count($manifest['exercises']) > 500) {
             throw ValidationException::withMessages(['archive' => 'Een import mag maximaal 500 oefeningen bevatten.']);
         }

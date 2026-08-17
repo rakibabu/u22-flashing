@@ -74,6 +74,10 @@ test('coach can import exercises and their media without duplicates', function (
         ->assertRedirect(route('coach.exercises.index'))
         ->assertSessionHas('exercise-imported');
 
+    $this->get(route('coach.exercises.index'))
+        ->assertSee('Import voltooid')
+        ->assertSee('1 oefening geïmporteerd.');
+
     $this->actingAs($coach)->post(route('coach.exercises.import'), ['archive' => UploadedFile::fake()->createWithContent('oefeningen.zip', file_get_contents($archive))]);
 
     $exercise = ExerciseLibraryItem::query()->sole();
@@ -94,11 +98,42 @@ test('invalid exercise import does not create partial records', function () {
     $this->actingAs($coach)->from(route('coach.exercises.index'))
         ->post(route('coach.exercises.import'), ['archive' => UploadedFile::fake()->createWithContent('oefeningen.zip', file_get_contents($archive))])
         ->assertRedirect(route('coach.exercises.index'))
-        ->assertSessionHasErrors('uuid');
+        ->assertSessionHas('exercise-import-error');
 
     expect(ExerciseLibraryItem::query()->count())->toBe(0);
 
     unlink($archive);
+});
+
+test('empty exercise import shows a clear error', function () {
+    $coach = User::factory()->coach()->create();
+    $archive = exerciseArchive([]);
+
+    $this->actingAs($coach)->from(route('coach.exercises.index'))
+        ->post(route('coach.exercises.import'), ['archive' => UploadedFile::fake()->createWithContent('oefeningen.zip', file_get_contents($archive))])
+        ->assertRedirect(route('coach.exercises.index'))
+        ->assertSessionHas('exercise-import-error');
+
+    $this->get(route('coach.exercises.index'))
+        ->assertSee('Importeren mislukt')
+        ->assertSee('Dit archief bevat geen oefeningen.');
+
+    expect(ExerciseLibraryItem::query()->count())->toBe(0);
+
+    unlink($archive);
+});
+
+test('invalid upload shows a clear error', function () {
+    $coach = User::factory()->coach()->create();
+
+    $this->actingAs($coach)->from(route('coach.exercises.index'))
+        ->post(route('coach.exercises.import'))
+        ->assertRedirect(route('coach.exercises.index'))
+        ->assertSessionHas('exercise-import-error');
+
+    $this->get(route('coach.exercises.index'))
+        ->assertSee('Importeren mislukt')
+        ->assertSee('Kies een ZIP-bestand om te importeren.');
 });
 
 test('player cannot import or export exercises', function () {
