@@ -87,7 +87,7 @@
                         class="w-full"
                         x-show="!offlineSaved"
                         x-bind:disabled="offlineSaving"
-                        x-on:click="offlineSaving = true; offlineError = ''; try { await trainingOffline.saveTraining(offlineTraining); } catch (error) { offlineError = 'Offline opslaan lukt niet op dit toestel. Controleer of browseropslag is toegestaan.'; console.error('Training offline opslaan mislukt.', error); } finally { offlineSaving = false; }"
+                        x-on:click="offlineSaving = true; offlineError = ''; try { await trainingOffline.saveTraining(offlineTraining); } catch (error) { offlineError = error.message || 'Offline opslaan lukt niet op dit toestel. Controleer of browseropslag is toegestaan.'; console.error('Training offline opslaan mislukt.', error); } finally { offlineSaving = false; }"
                     >
                         Maak offline beschikbaar
                     </flux:button>
