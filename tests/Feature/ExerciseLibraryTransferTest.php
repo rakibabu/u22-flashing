@@ -10,6 +10,7 @@ test('coach can export active exercises and their media', function () {
     $coach = User::factory()->coach()->create();
     $exercise = ExerciseLibraryItem::factory()->create([
         'name' => 'Closeout met media',
+        'coaching_cues' => '',
         'materials' => ['2 ballen'],
         'media_path' => 'exercise-media/closeout.pdf',
         'media_type' => 'application/pdf',
@@ -30,6 +31,7 @@ test('coach can export active exercises and their media', function () {
     expect($manifest['format'])->toBe('u22-basketball-exercise-library')
         ->and($manifest['exercises'])->toHaveCount(1)
         ->and($manifest['exercises'][0]['uuid'])->toBe($exercise->uuid)
+        ->and($manifest['exercises'][0]['coaching_cues'])->toBe('')
         ->and($manifest['exercises'][0]['media']['mime'])->toBe('application/pdf')
         ->and($archive->getFromName($manifest['exercises'][0]['media']['path']))->toBe('%PDF-1.4 test');
 
@@ -64,7 +66,7 @@ test('coach can import exercises and their media without duplicates', function (
         'video_url' => 'https://example.com/video',
         'external_url' => null,
         'default_coach' => 'Tim',
-        'coaching_cues' => 'Kijk naar de weak side.',
+        'coaching_cues' => '',
         'common_mistakes' => null,
         'sort_order' => 4,
         'media' => ['path' => 'media/1e5f312c-18c1-4f4b-b345-95d47f02df8d.pdf', 'mime' => 'application/pdf'],

@@ -88,7 +88,7 @@ class ExportExerciseLibrary
             'video_url' => $exercise->video_url,
             'external_url' => $exercise->external_url,
             'default_coach' => $exercise->default_coach->value,
-            'coaching_cues' => $exercise->coaching_cues,
+            'coaching_cues' => $exercise->coaching_cues ?? '',
             'common_mistakes' => $exercise->common_mistakes,
             'sort_order' => $exercise->sort_order,
             'media' => null,

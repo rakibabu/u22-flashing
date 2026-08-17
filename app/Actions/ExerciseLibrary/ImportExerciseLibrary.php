@@ -144,7 +144,7 @@ class ImportExerciseLibrary
             'video_url' => ['nullable', 'url:https', 'max:2048'],
             'external_url' => ['nullable', 'url:https', 'max:2048'],
             'default_coach' => ['required', 'in:'.implode(',', array_column(TrainingCoach::cases(), 'value'))],
-            'coaching_cues' => ['required', 'string'],
+            'coaching_cues' => ['nullable', 'string'],
             'common_mistakes' => ['nullable', 'string'],
             'sort_order' => ['required', 'integer', 'min:0', 'max:65535'],
             'media' => ['nullable', 'array'],
@@ -196,6 +196,7 @@ class ImportExerciseLibrary
         }
 
         $attributes = collect($record)->except(['uuid', 'media'])->all();
+        $attributes['coaching_cues'] ??= '';
         $attributes['media_path'] = $mediaPath;
         $attributes['media_type'] = $mediaType;
 
