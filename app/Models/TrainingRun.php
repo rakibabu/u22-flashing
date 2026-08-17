@@ -52,6 +52,11 @@ class TrainingRun extends Model
         return $this->hasMany(TrainingAttendance::class);
     }
 
+    public function feedback(): HasMany
+    {
+        return $this->hasMany(TrainingRunFeedback::class)->latest();
+    }
+
     public function elapsedSeconds(): int
     {
         $end = $this->ended_at ?? now();

@@ -5,6 +5,7 @@ use App\Http\Controllers\ExerciseLibraryMediaController;
 use App\Http\Controllers\InviteActivationController;
 use App\Http\Controllers\PlayerProgramPdfController;
 use App\Http\Controllers\TeamDocumentPdfController;
+use App\Http\Controllers\TrainingEvaluationShareController;
 use App\Http\Controllers\TrainingOfflineSyncController;
 use App\Http\Controllers\TrainingShareController;
 use App\Livewire\Coach\Advice\Index as CoachAdviceIndex;
@@ -42,6 +43,8 @@ Route::get('/invite/{token}', [InviteActivationController::class, 'show'])->name
 Route::post('/invite/{token}', [InviteActivationController::class, 'store'])->name('invite.store');
 Route::get('/activate/{token}', TeamActivation::class)->middleware('guest')->name('team-invite.show');
 Route::get('trainingen/{training}/delen', TrainingShareController::class)->middleware('signed')->name('trainings.share');
+Route::get('training-runs/{trainingRun}/evaluatie-delen', [TrainingEvaluationShareController::class, 'show'])->middleware('signed')->name('training-runs.evaluation-share');
+Route::post('training-runs/{trainingRun}/evaluatie-feedback', [TrainingEvaluationShareController::class, 'store'])->middleware(['signed', 'throttle:5,1'])->name('training-runs.evaluation-feedback');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', fn () => auth()->user()->canAccessCoachArea()

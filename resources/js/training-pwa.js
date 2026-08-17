@@ -131,7 +131,7 @@ window.trainingTimer = (config) => ({
 });
 
 if ('serviceWorker' in navigator) {
-    addEventListener('load', () => navigator.serviceWorker.register('/service-worker.js?v=4'));
+    addEventListener('load', () => navigator.serviceWorker.register('/service-worker.js?v=5'));
 }
 
 document.addEventListener('submit', event => {

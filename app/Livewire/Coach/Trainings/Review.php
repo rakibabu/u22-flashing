@@ -6,6 +6,7 @@ use App\Enums\TrainingAttendanceStatus;
 use App\Models\Player;
 use App\Models\TrainingSession;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\URL;
 use Livewire\Component;
 
 class Review extends Component
@@ -57,8 +58,15 @@ class Review extends Component
 
     public function render()
     {
-        $run = $this->training->runs()->with(['blockRuns.trainingBlock', 'attendances'])->latest()->firstOrFail();
+        $run = $this->training->runs()->with(['blockRuns.trainingBlock', 'attendances', 'feedback'])->latest()->firstOrFail();
+        $evaluationShareUrl = URL::temporarySignedRoute('training-runs.evaluation-share', now()->addDays(30), ['trainingRun' => $run]);
+        $whatsAppShareUrl = 'https://wa.me/?text='.rawurlencode("Bekijk de evaluatie en geef je feedback over \"{$this->training->title}\":\n{$evaluationShareUrl}\n\nWerk je ook met een team? Bekijk U22 Monitoring: ".route('home'));
 
-        return view('livewire.coach.trainings.review', ['run' => $run, 'players' => Player::query()->where('active', true)->orderBy('name')->get(), 'statuses' => TrainingAttendanceStatus::cases()])->layout('layouts.app');
+        return view('livewire.coach.trainings.review', [
+            'run' => $run,
+            'players' => Player::query()->where('active', true)->orderBy('name')->get(),
+            'statuses' => TrainingAttendanceStatus::cases(),
+            'whatsAppShareUrl' => $whatsAppShareUrl,
+        ])->layout('layouts.app');
     }
 }
