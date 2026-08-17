@@ -98,7 +98,7 @@ test('invalid exercise import does not create partial records', function () {
     $this->actingAs($coach)->from(route('coach.exercises.index'))
         ->post(route('coach.exercises.import'), ['archive' => UploadedFile::fake()->createWithContent('oefeningen.zip', file_get_contents($archive))])
         ->assertRedirect(route('coach.exercises.index'))
-        ->assertSessionHas('exercise-import-error');
+        ->assertSessionHas('exercise-import-error', fn (string $message): bool => $message !== 'De oefeningen konden niet worden geïmporteerd.');
 
     expect(ExerciseLibraryItem::query()->count())->toBe(0);
 

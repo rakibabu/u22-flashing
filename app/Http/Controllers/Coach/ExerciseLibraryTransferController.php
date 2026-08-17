@@ -29,7 +29,9 @@ class ExerciseLibraryTransferController extends Controller
         try {
             $count = $importExerciseLibrary->handle($request->file('archive'), $request->user());
         } catch (ValidationException $exception) {
-            return to_route('coach.exercises.index')->with('exercise-import-error', $exception->errors()['archive'][0] ?? 'De oefeningen konden niet worden geïmporteerd.');
+            $error = collect($exception->errors())->flatten()->first();
+
+            return to_route('coach.exercises.index')->with('exercise-import-error', is_string($error) ? $error : 'De oefeningen konden niet worden geïmporteerd.');
         }
 
         return to_route('coach.exercises.index')->with('exercise-imported', trans_choice('{1} 1 oefening geïmporteerd.|[2,*] :count oefeningen geïmporteerd.', $count));
