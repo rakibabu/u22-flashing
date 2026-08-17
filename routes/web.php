@@ -6,6 +6,7 @@ use App\Http\Controllers\InviteActivationController;
 use App\Http\Controllers\PlayerProgramPdfController;
 use App\Http\Controllers\TeamDocumentPdfController;
 use App\Http\Controllers\TrainingOfflineSyncController;
+use App\Http\Controllers\TrainingShareController;
 use App\Livewire\Coach\Advice\Index as CoachAdviceIndex;
 use App\Livewire\Coach\AnalysisExport;
 use App\Livewire\Coach\Checkins\Index as CoachCheckinsIndex;
@@ -40,6 +41,7 @@ Route::get('/', fn () => auth()->check()
 Route::get('/invite/{token}', [InviteActivationController::class, 'show'])->name('invite.show');
 Route::post('/invite/{token}', [InviteActivationController::class, 'store'])->name('invite.store');
 Route::get('/activate/{token}', TeamActivation::class)->middleware('guest')->name('team-invite.show');
+Route::get('trainingen/{training}/delen', TrainingShareController::class)->middleware('signed')->name('trainings.share');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', fn () => auth()->user()->canAccessCoachArea()

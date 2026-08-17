@@ -10,6 +10,7 @@ use App\Enums\TrainingStatus;
 use App\Models\ExerciseLibraryItem;
 use App\Models\TrainingSession;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\URL;
 use Livewire\Component;
 
 class Builder extends Component
@@ -127,7 +128,15 @@ class Builder extends Component
     public function render()
     {
         $blocks = $this->training->exists ? $this->training->blocks()->get() : collect();
+        $shareUrl = null;
+        $whatsAppShareUrl = null;
 
-        return view('livewire.coach.trainings.builder', ['blocks' => $blocks, 'exercises' => ExerciseLibraryItem::active()->whereIn('scope', ['team', 'both'])->when($this->search, fn ($q) => $q->where('name', 'like', '%'.$this->search.'%'))->when($this->exerciseCategory, fn ($q) => $q->where('category', $this->exerciseCategory))->orderBy('name')->limit(30)->get(), 'categories' => ExerciseLibraryItem::active()->whereIn('scope', ['team', 'both'])->distinct()->orderBy('category')->pluck('category'), 'filledMinutes' => $blocks->sum('planned_duration_minutes')])->layout('layouts.app');
+        if ($this->training->exists) {
+            $shareUrl = URL::temporarySignedRoute('trainings.share', now()->addDays(30), ['training' => $this->training]);
+            $message = "Bekijk de training \"{$this->training->title}\" van Flashing Heiloo U22:\n{$shareUrl}\n\nWerk je ook met een team? Bekijk U22 Monitoring: ".route('home');
+            $whatsAppShareUrl = 'https://wa.me/?text='.rawurlencode($message);
+        }
+
+        return view('livewire.coach.trainings.builder', ['blocks' => $blocks, 'exercises' => ExerciseLibraryItem::active()->whereIn('scope', ['team', 'both'])->when($this->search, fn ($q) => $q->where('name', 'like', '%'.$this->search.'%'))->when($this->exerciseCategory, fn ($q) => $q->where('category', $this->exerciseCategory))->orderBy('name')->limit(30)->get(), 'categories' => ExerciseLibraryItem::active()->whereIn('scope', ['team', 'both'])->distinct()->orderBy('category')->pluck('category'), 'filledMinutes' => $blocks->sum('planned_duration_minutes'), 'whatsAppShareUrl' => $whatsAppShareUrl])->layout('layouts.app');
     }
 }

@@ -1,6 +1,6 @@
 <div class="space-y-6">
     <x-page-header :title="$training->exists ? 'Training bewerken' : 'Nieuwe training'" description="Stel blokken samen en wijs per blok de uitvoerende coach toe.">
-        <x-slot:actions>@if($training->exists)<flux:button :href="route('coach.trainings.run', $training)" variant="primary" wire:navigate>Uitvoeren</flux:button>@endif</x-slot:actions>
+        <x-slot:actions>@if($training->exists)<flux:button :href="$whatsAppShareUrl" target="_blank" rel="noopener">Delen via WhatsApp</flux:button><flux:button :href="route('coach.trainings.run', $training)" variant="primary" wire:navigate>Uitvoeren</flux:button>@endif</x-slot:actions>
     </x-page-header>
 
     <form wire:submit="save" class="grid gap-4 rounded-xl border border-primary-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 md:grid-cols-2">
